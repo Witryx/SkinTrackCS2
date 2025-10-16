@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { mockSkins, rarityColors, type Skin } from "../lib/mock/skins";
+import {
+  mockSkins,
+  rarityBgClass,
+  rarityTextClass,
+  type Skin,
+} from "../lib/mock/skins";
 
 export default function ExplorerPage() {
   const [q, setQ] = useState("");
@@ -24,7 +29,7 @@ export default function ExplorerPage() {
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Skin Explorer (demo)</h1>
-          <p className="text-white/60">Testovací seznam – později DB/Prisma.</p>
+          <p className="text-white/60">Testovací seznam</p>
         </div>
 
         <div className="w-full sm:w-80">
@@ -37,7 +42,7 @@ export default function ExplorerPage() {
         </div>
       </header>
 
-      {/* Seznam skinů */}
+      {/* Seznam karet */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
         {data.map((s) => (
           <Link
@@ -45,9 +50,10 @@ export default function ExplorerPage() {
             href={`/explorer/${s.id}`}
             className="bg-white/5 rounded-2xl overflow-hidden shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform border border-white/10 flex flex-col"
           >
-            {/* obrázek */}
+            {/* Obrázek + rarity bar */}
             <div className="relative aspect-video bg-black/30 flex items-center justify-center">
               {s.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={s.image}
                   alt={s.name}
@@ -57,15 +63,15 @@ export default function ExplorerPage() {
                 <div className="text-white/50 text-sm">no image</div>
               )}
               <div
-                className={`absolute top-0 left-0 w-full h-1.5 bg-${rarityColors[s.rarity]}-500`}
+                className={`absolute top-0 left-0 w-full h-1.5 ${rarityBgClass[s.rarity]}`}
               />
             </div>
 
-            {/* obsah */}
+            {/* Obsah */}
             <div className="p-4 flex flex-col gap-1">
               <div className="text-xs text-white/60">{s.weapon}</div>
               <div className="font-semibold text-lg">{s.name}</div>
-              <div className={`text-sm font-medium text-${rarityColors[s.rarity]}-400`}>
+              <div className={`text-sm font-medium ${rarityTextClass[s.rarity]}`}>
                 {s.rarity}
               </div>
               <div className="mt-2 text-right text-[17px] font-semibold">
