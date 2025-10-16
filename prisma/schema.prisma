@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  steamId   String?   @unique
+  email     String?   @unique
+  name      String?
+  createdAt DateTime  @default(now())
+  favorites Favorite[]
+}
+
+model Skin {
+  id          Int              @id @default(autoincrement())
+  weapon      String
+  name        String
+  rarity      String
+  imageUrl    String?
+  createdAt   DateTime         @default(now())
+  prices      PriceSnapshot[]
+  favorites   Favorite[]
+  @@index([weapon, name])
+}
+
+model Shop {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  url       String?
+  createdAt DateTime @default(now())
+  prices    PriceSnapshot[]
+}
+
+model PriceSnapshot {
+  id         Int      @id @default(autoincrement())
+  skinId     Int
+  shopId     Int
+  currency   String
+  price      Decimal  @db.Decimal(10,2)
+  capturedAt DateTime @default(now())
+
+  skin Skin @relation(fields: [skinId], references: [id])
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@index([skinId, shopId, capturedAt])
+}
+
+model Favorite {
+  userId   Int
+  skinId   Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  skin Skin @relation(fields: [skinId], references: [id])
+
+  @@id([userId, skinId])
+}
