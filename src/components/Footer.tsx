@@ -5,7 +5,7 @@ export default function Footer() {
         <p>© {new Date().getFullYear()} SkinTrack CS2</p>
         <p>
           Vyrobil s ❤️ pro ročníkovku.{" "}
-          <a className="link" href="https://github.com/Witryx/SkinTrackCS2" target="_blank">
+          <a className="link" href="https://github.com/Witryx" target="_blank">
             GitHub
           </a>
         </p>

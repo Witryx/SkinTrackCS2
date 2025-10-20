@@ -50,10 +50,9 @@ export default function ExplorerPage() {
             href={`/explorer/${s.id}`}
             className="bg-white/5 rounded-2xl overflow-hidden shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform border border-white/10 flex flex-col"
           >
-            {/* Obrázek + rarity bar */}
+            {/* Pic + rarity bar */}
             <div className="relative aspect-video bg-black/30 flex items-center justify-center">
               {s.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={s.image}
                   alt={s.name}

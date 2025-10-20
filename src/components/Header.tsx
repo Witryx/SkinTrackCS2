@@ -6,7 +6,6 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[color:var(--bg)]/80 backdrop-blur">
       <div className="container-max h-16 flex items-center justify-between">
-        {/* 🔹 Logo + název */}
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Image
             src="/logo.png" 

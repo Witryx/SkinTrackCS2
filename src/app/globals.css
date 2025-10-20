@@ -1,7 +1,6 @@
-/* Tailwind v4 vstup */
 @import "tailwindcss";
 
-/* 🌗 Světlý / tmavý mód */
+/* light dark mód */
 :root {
   --bg: #ffffff;
   --fg: #0f172a;
@@ -16,7 +15,6 @@
   --card: #0f172a;
 }
 
-/* 📏 Základ */
 html, body { height: 100%; }
 body {
   background: var(--bg);
@@ -24,30 +22,29 @@ body {
   transition: background .3s, color .3s;
 }
 
-/* 🧱 Pomocné classy – čisté CSS, žádné @apply */
 .container-max {
-  max-width: 72rem;            /* ~ max-w-6xl */
+  max-width: 72rem;
   margin-left: auto;
-  margin-right: auto;          /* mx-auto */
+  margin-right: auto;
   padding-left: 1rem;
-  padding-right: 1rem;         /* px-4 */
+  padding-right: 1rem;
 }
-@media (min-width: 640px) {    /* sm */
+@media (min-width: 640px) {
   .container-max { padding-left: 1.5rem; padding-right: 1.5rem; }
 }
-@media (min-width: 1024px) {   /* lg */
+@media (min-width: 1024px) {
   .container-max { padding-left: 2rem; padding-right: 2rem; }
 }
 
 .card {
-  border-radius: 1rem;                         /* ~ rounded-2xl */
+  border-radius: 1rem;
   background-color: var(--card);
   border: 1px solid rgba(255,255,255,.05);
-  box-shadow: 0 6px 24px rgba(0,0,0,.25);      /* soft shadow */
+  box-shadow: 0 6px 24px rgba(0,0,0,.25);
 }
 
 .link {
-  color: rgb(56 189 248);      /* sky-400 */
+  color: rgb(56 189 248);
   text-decoration: none;
 }
 .link:hover { text-decoration: underline; }

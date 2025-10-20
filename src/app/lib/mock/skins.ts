@@ -6,7 +6,7 @@ export type Skin = {
   weapon: string;
   rarity: Rarity;
   price: number;
-  image?: string; // cesta z /public, např. "/skins/ak_redline.png"
+  image?: string;
 };
 
 export const mockSkins: Skin[] = [
@@ -44,7 +44,6 @@ export const mockSkins: Skin[] = [
   },
 ];
 
-// Pevné Tailwind třídy – aby je purge nesmazal (žádné bg-${...})
 export const rarityBgClass: Record<Rarity, string> = {
   Common: "bg-gray-500",
   Uncommon: "bg-green-500",

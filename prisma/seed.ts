@@ -36,7 +36,7 @@ async function main() {
 
 main()
   .then(() => {
-    console.log('✅ Seed hotov!')
+    console.log('Seed hotov!')
     prisma.$disconnect()
   })
   .catch((e) => {

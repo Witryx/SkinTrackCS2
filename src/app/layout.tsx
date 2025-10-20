@@ -15,7 +15,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="cs" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen flex flex-col`}>
-        {/* App Shell */}
         <Header />
         <main className="flex-1 container-max py-8">{children}</main>
         <Footer />
