@@ -7,56 +7,172 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int       @id @default(autoincrement())
-  steamId   String?   @unique
-  email     String?   @unique
-  name      String?
-  createdAt DateTime  @default(now())
-  favorites Favorite[]
+model weapons {
+  weapon_id Int        @id @default(autoincrement())
+  name      String
+  type      WeaponType
+  skins     skins[]
 }
 
-model Skin {
-  id          Int              @id @default(autoincrement())
-  weapon      String
+enum WeaponType {
+  rifle
+  pistol
+  smg
+  shotgun
+  sniper
+  knife
+  gloves
+  other
+}
+
+model skins {
+  skin_id     Int     @id @default(autoincrement())
+  weapon_id   Int
   name        String
-  rarity      String
-  imageUrl    String?
-  createdAt   DateTime         @default(now())
-  prices      PriceSnapshot[]
-  favorites   Favorite[]
-  @@index([weapon, name])
+  rarity      Rarity
+  collection  String?
+  image_url   String?
+  description String?
+
+  weapon   weapons         @relation(fields: [weapon_id], references: [weapon_id])
+  variants skin_variants[]
+  origins  skin_origin[]
+  tradeups tradeups[]
 }
 
-model Shop {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  url       String?
-  createdAt DateTime @default(now())
-  prices    PriceSnapshot[]
+enum Rarity {
+  consumer
+  industrial
+  mil_spec
+  restricted
+  classified
+  covert
+  contraband
 }
 
-model PriceSnapshot {
-  id         Int      @id @default(autoincrement())
-  skinId     Int
-  shopId     Int
+model skin_variants {
+  variant_id Int      @id @default(autoincrement())
+  skin_id    Int
+  quality    Quality
+  min_float  Decimal? @db.Decimal(5, 4)
+  max_float  Decimal? @db.Decimal(5, 4)
+  stat_trak  Boolean  @default(false)
+  souvenir   Boolean  @default(false)
+
+  skin                skins                 @relation(fields: [skin_id], references: [skin_id])
+  prices              prices[]
+  wishlist            wishlist[]
+  inventory           user_inventory[]
+  price_notifications price_notifications[]
+}
+
+enum Quality {
+  FN
+  MW
+  FT
+  WW
+  BS
+}
+
+model shops {
+  shop_id  Int     @id @default(autoincrement())
+  name     String
+  api_url  String?
+  logo_url String?
+
+  prices prices[]
+}
+
+model prices {
+  price_id   Int      @id @default(autoincrement())
+  variant_id Int
+  shop_id    Int
+  price      Decimal  @db.Decimal(10, 2)
   currency   String
-  price      Decimal  @db.Decimal(10,2)
-  capturedAt DateTime @default(now())
+  timestamp  DateTime @default(now())
 
-  skin Skin @relation(fields: [skinId], references: [id])
-  shop Shop @relation(fields: [shopId], references: [id])
-
-  @@index([skinId, shopId, capturedAt])
+  variant skin_variants @relation(fields: [variant_id], references: [variant_id])
+  shop    shops         @relation(fields: [shop_id], references: [shop_id])
 }
 
-model Favorite {
-  userId   Int
-  skinId   Int
-  createdAt DateTime @default(now())
+model users {
+  user_id    Int      @id @default(autoincrement())
+  steam_id   String   @unique
+  username   String?
+  avatar_url String?
+  created_at DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  skin Skin @relation(fields: [skinId], references: [id])
+  wishlist            wishlist[]
+  price_notifications price_notifications[]
+  inventory           user_inventory[]
+  tradeups            tradeups[]
+}
 
-  @@id([userId, skinId])
+model wishlist {
+  wishlist_id Int      @id @default(autoincrement())
+  user_id     Int
+  variant_id  Int
+  created_at  DateTime @default(now())
+
+  user    users         @relation(fields: [user_id], references: [user_id])
+  variant skin_variants @relation(fields: [variant_id], references: [variant_id])
+}
+
+model price_notifications {
+  notification_id Int       @id @default(autoincrement())
+  user_id         Int
+  variant_id      Int
+  target_price    Decimal   @db.Decimal(10, 2)
+  direction       Direction
+  created_at      DateTime  @default(now())
+
+  user    users         @relation(fields: [user_id], references: [user_id])
+  variant skin_variants @relation(fields: [variant_id], references: [variant_id])
+}
+
+enum Direction {
+  below
+  above
+}
+
+model user_inventory {
+  inventory_id Int      @id @default(autoincrement())
+  user_id      Int
+  variant_id   Int
+  float_value  Decimal? @db.Decimal(5, 4)
+  exterior     Quality?
+  stat_trak    Boolean  @default(false)
+  souvenir     Boolean  @default(false)
+  image_url    String?
+
+  user    users         @relation(fields: [user_id], references: [user_id])
+  variant skin_variants @relation(fields: [variant_id], references: [variant_id])
+}
+
+model tradeups {
+  tradeup_id     Int      @id @default(autoincrement())
+  user_id        Int
+  input_skin_ids Json
+  output_skin_id Int
+  success_chance Decimal? @db.Decimal(5, 2)
+  timestamp      DateTime @default(now())
+
+  user        users @relation(fields: [user_id], references: [user_id])
+  output_skin skins @relation(fields: [output_skin_id], references: [skin_id])
+}
+
+model skin_origin {
+  origin_id       Int      @id @default(autoincrement())
+  skin_id         Int
+  case_name       String?
+  collection_name String?
+  drop_type       DropType
+
+  skin skins @relation(fields: [skin_id], references: [skin_id])
+}
+
+enum DropType {
+  case
+  collection
+  souvenir_package
 }

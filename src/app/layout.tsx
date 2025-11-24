@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import "./globals.css";
+import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -8,15 +8,19 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "SkinTrack CS2",
-  description: "Databáze a sledování cen CS2 skinů",
+  description: "Ročníkový projekt – Steam skins explorer",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="cs" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen flex flex-col`}>
+    <html lang="cs">
+      <body className={inter.className}>
         <Header />
-        <main className="flex-1 container-max py-8">{children}</main>
+        {children}
         <Footer />
       </body>
     </html>

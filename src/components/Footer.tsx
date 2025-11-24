@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="container-max py-6 text-sm text-[color:var(--muted)] flex flex-col sm:flex-row items-center justify-between gap-3">
         <p>© {new Date().getFullYear()} SkinTrack CS2</p>
         <p>
-          Vyrobil s ❤️ pro ročníkovku.{" "}
+          Vyrobil s ❤️{" "}
           <a className="link" href="https://github.com/Witryx" target="_blank">
             GitHub
           </a>
