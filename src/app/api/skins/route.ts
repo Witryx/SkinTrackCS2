@@ -1,16 +1,11 @@
-import { PrismaClient } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
+import { searchSkinsDb } from "@/app/lib/skin-database";
 
-const prisma = new PrismaClient()
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const limitParam = parseInt(searchParams.get("limit") ?? "50", 10);
+  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 200) : 50;
 
-export async function GET() {
-  const skins = await prisma.skin.findMany({
-    include: {
-      prices: {
-        orderBy: { capturedAt: 'desc' },
-        take: 1,
-      },
-    },
-  })
-  return NextResponse.json(skins)
+  const items = await searchSkinsDb({ limit, sort: "volume" });
+  return NextResponse.json({ items });
 }

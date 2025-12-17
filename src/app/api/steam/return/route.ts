@@ -8,7 +8,6 @@ const openidEndpoint = "https://steamcommunity.com/openid/login";
 export async function GET(req: NextRequest) {
   const url = req.nextUrl;
 
-  // Steam musí vrátit openid.mode=id_res
   const mode = url.searchParams.get("openid.mode");
   if (mode !== "id_res") {
     const failUrl = new URL("/", siteUrl);
@@ -16,7 +15,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(failUrl.toString());
   }
 
-  // --- Ověření pomocí check_authentication ---
   const verifyParams = new URLSearchParams();
 
   url.searchParams.forEach((value, key) => {
@@ -51,32 +49,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(failUrl.toString());
     }
 
-    // 📌 Získání SteamID
     const identity = url.searchParams.get("openid.identity") || "";
     const match = identity.match(/(\d+)$/);
     const steamId = match ? match[1] : "";
 
-    // 📌 Uložení/aktualizace uživatele v DB
     if (steamId) {
       const profile = await getSteamUser(steamId);
 
       if (profile) {
-        await prisma.users.upsert({
-          where: { steam_id: steamId },
+        await prisma.user.upsert({
+          where: { steamId },
           update: {
-            username: profile.username,
-            avatar_url: profile.avatar,
+            name: profile.username,
+            avatarUrl: profile.avatar,
           },
           create: {
-            steam_id: steamId,
-            username: profile.username,
-            avatar_url: profile.avatar,
+            steamId,
+            name: profile.username,
+            avatarUrl: profile.avatar,
           },
         });
       }
     }
 
-    // ✔ Redirect zpět na web
     const successUrl = new URL("/", siteUrl);
     if (steamId) {
       successUrl.searchParams.set("steamId", steamId);

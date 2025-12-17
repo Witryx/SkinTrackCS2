@@ -111,17 +111,10 @@ export default function Header() {
                   animate-[fadeIn_0.15s_ease-out,slideDown_0.15s_ease-out] overflow-hidden z-50">
 
                   <Link
-                    href={`/profile/${steamId}`}
-                    className="block px-4 py-2 text-sm hover:bg-white/5 transition"
-                  >
-                    👤 Můj profil
-                  </Link>
-
-                  <Link
                     href="/favorites"
-                    className="block px-4 py-2 text-sm hover:bg-white/5 transition"
+                    className="block px-4 py-2 text-sm hover:bg-white/5 transition opacity-50 cursor-not-allowed"
                   >
-                    ⭐ Oblíbené skiny
+                    ⭐ Oblíbené skiny (brzy)
                   </Link>
 
                   <Link
@@ -133,9 +126,9 @@ export default function Header() {
 
                   <Link
                     href="/tradeup"
-                    className="block px-4 py-2 text-sm hover:bg-white/5 transition"
+                    className="block px-4 py-2 text-sm hover:bg-white/5 transition opacity-50 cursor-not-allowed"
                   >
-                    🔧 Trade-up sim
+                    🔧 Trade-up sim (brzy)
                   </Link>
 
                   <button

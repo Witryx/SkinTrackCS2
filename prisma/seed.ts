@@ -1,45 +1,18 @@
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+import { PrismaClient } from "@prisma/client";
+import { syncSkinDatabase } from "../src/app/lib/skin-database";
+
+const prisma = new PrismaClient();
 
 async function main() {
-  // Obchody
-  const steam = await prisma.shop.upsert({
-    where: { name: 'Steam' },
-    update: {},
-    create: { name: 'Steam', url: 'https://store.steampowered.com/' },
-  })
-
-  const skinport = await prisma.shop.upsert({
-    where: { name: 'Skinport' },
-    update: {},
-    create: { name: 'Skinport', url: 'https://skinport.com/' },
-  })
-
-  // Jeden skin
-  const ak = await prisma.skin.create({
-    data: {
-      weapon: 'AK-47',
-      name: 'Redline',
-      rarity: 'Classified',
-      imageUrl: null,
-    },
-  })
-
-  // Ceny
-  await prisma.priceSnapshot.createMany({
-    data: [
-      { skinId: ak.id, shopId: steam.id, currency: 'EUR', price: 24.90 },
-      { skinId: ak.id, shopId: skinport.id, currency: 'EUR', price: 22.50 },
-    ],
-  })
+  console.log("Spoustim import skinu ze Skinport API...");
+  const result = await syncSkinDatabase(prisma);
+  console.log(`Hotovo: upsertnuto ${result.upserted} skinu (celkem ${result.total} polozek v API).`);
 }
 
 main()
-  .then(() => {
-    console.log('Seed hotov!')
-    prisma.$disconnect()
-  })
   .catch((e) => {
-    console.error(e)
-    prisma.$disconnect()
+    console.error("Seed selhal", e);
   })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
