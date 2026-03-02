@@ -11,10 +11,22 @@ import { resolveRarity } from "./rarity";
 import {
   getSkinMetaMap,
   lookupSkinMetaFromParsed,
-  normalizeParsedForMeta,
 } from "./skin-meta";
+import type { ShopPrice } from "./shop-prices";
+import {
+  isWeaponMatchingFilter,
+  isWeaponInSkinCategory,
+  resolveSkinCategory,
+  resolveSkinWeaponKey,
+} from "./skin-categories";
 
 const SKINPORT_SHOP_NAME = "Skinport";
+const SHOP_URLS: Record<string, string> = {
+  Skinport: "https://skinport.com",
+  "Steam Market": "https://steamcommunity.com/market",
+  DMarket: "https://dmarket.com/ingame-items/item-list/csgo-skins",
+  CSFloat: "https://csfloat.com/market",
+};
 
 const wearFloatRanges: Record<string, { min: number; max: number }> = {
   "Factory New": { min: 0, max: 0.07 },
@@ -49,6 +61,8 @@ export type SkinSearchFilters = {
   minPrice?: number;
   maxPrice?: number;
   rarity?: string;
+  category?: string;
+  weapon?: string;
   tradable?: boolean;
   sort?: "volume" | "cheapest" | "most-expensive";
   limit?: number;
@@ -73,17 +87,27 @@ export type SkinSearchResult = {
   marketPage?: string | null;
 };
 
-let cachedSkinportShopId: number | null = null;
+const shopIdCache = new Map<string, number>();
+
+async function getShopId(
+  client: PrismaClient,
+  name: string,
+  url?: string | null
+) {
+  const normalized = name.trim();
+  const cached = shopIdCache.get(normalized);
+  if (cached) return cached;
+  const shop = await client.shop.upsert({
+    where: { name: normalized },
+    update: url ? { url } : {},
+    create: { name: normalized, url: url ?? null },
+  });
+  shopIdCache.set(normalized, shop.id);
+  return shop.id;
+}
 
 async function getSkinportShopId(client: PrismaClient) {
-  if (cachedSkinportShopId) return cachedSkinportShopId;
-  const shop = await client.shop.upsert({
-    where: { name: SKINPORT_SHOP_NAME },
-    update: {},
-    create: { name: SKINPORT_SHOP_NAME, url: "https://skinport.com" },
-  });
-  cachedSkinportShopId = shop.id;
-  return shop.id;
+  return getShopId(client, SKINPORT_SHOP_NAME, SHOP_URLS[SKINPORT_SHOP_NAME]);
 }
 
 export async function syncSkinDatabase(client: PrismaClient = prisma) {
@@ -103,9 +127,6 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
 
   const items = Object.values(itemsMap);
   let upserted = 0;
-  let snapshots = 0;
-  const skinportShopId = await getSkinportShopId(client);
-
   for (const item of items) {
     const historyEntry =
       historyMap.get(item.market_hash_name.toLowerCase()) ?? null;
@@ -145,22 +166,86 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
     });
     upserted += 1;
 
-    const priceForSnapshot =
-      payload.price ?? payload.medianPrice ?? payload.suggestedPrice;
-    if (priceForSnapshot !== null) {
-      await client.priceSnapshot.create({
-        data: {
-          skinId: record.id,
-          shopId: skinportShopId,
-          currency: payload.currency,
-          price: priceForSnapshot,
-        },
-      });
-      snapshots += 1;
-    }
   }
 
-  return { total: items.length, upserted, snapshots };
+  return { total: items.length, upserted };
+}
+
+export async function upsertSkinFromSkinportName(
+  name: string,
+  client: PrismaClient = prisma
+) {
+  if (!name) return null;
+
+  try {
+    const [itemsMap, history, externalSkins] = await Promise.all([
+      getSkinportItems(),
+      getSkinportHistory(),
+      getSkinMetaMap().catch(() => null),
+    ]);
+
+  const normalized = name.trim().toLowerCase();
+  const itemCandidate =
+    itemsMap[normalized] ??
+    itemsMap[name] ??
+    Object.values(itemsMap).find(
+      (entry) => entry.market_hash_name.toLowerCase() === normalized
+    );
+
+  if (!itemCandidate) return null;
+
+  const historyMap = history.reduce<Map<string, SkinportHistoryItem>>(
+    (acc, entry) => {
+      acc.set(entry.market_hash_name.toLowerCase(), entry);
+      return acc;
+    },
+    new Map()
+  );
+
+  const historyEntry =
+    historyMap.get(itemCandidate.market_hash_name.toLowerCase()) ?? null;
+  const parsed = parseMarketHashName(itemCandidate.market_hash_name);
+  const floats = getFloatRange(parsed.wear);
+  const price = priceFromItem(itemCandidate, historyEntry);
+  const external = lookupSkinMetaFromParsed(
+    externalSkins,
+    parsed.weapon,
+    parsed.skin
+  );
+  const rarity = external?.rarity ?? resolveRarity(price);
+  const minFloat = external?.minFloat ?? floats?.min ?? null;
+  const maxFloat = external?.maxFloat ?? floats?.max ?? null;
+  const imageUrl = external?.imageUrl ?? null;
+
+  const payload = {
+    marketHashName: itemCandidate.market_hash_name,
+    weapon: parsed.weapon,
+    skin: parsed.skin,
+    wear: parsed.wear,
+    rarity,
+    minFloat,
+    maxFloat,
+    price,
+    medianPrice: itemCandidate.median_price ?? null,
+    suggestedPrice: itemCandidate.suggested_price ?? null,
+    quantity: itemCandidate.quantity ?? null,
+    volume7d: historyEntry?.last_7_days?.volume ?? null,
+    median7d: historyEntry?.last_7_days?.median ?? null,
+    currency: itemCandidate.currency ?? "EUR",
+    itemPage: itemCandidate.item_page ?? historyEntry?.item_page ?? null,
+    marketPage: itemCandidate.market_page ?? historyEntry?.market_page ?? null,
+    imageUrl,
+  };
+
+    return client.skin.upsert({
+      where: { marketHashName: itemCandidate.market_hash_name },
+      update: payload,
+      create: payload,
+    });
+  } catch (err) {
+    console.error("upsertSkinFromSkinportName failed", err);
+    return null;
+  }
 }
 
 export async function searchSkinsDb(
@@ -169,6 +254,8 @@ export async function searchSkinsDb(
     minPrice,
     maxPrice,
     rarity,
+    category,
+    weapon,
     tradable,
     sort = "volume",
     limit = 60,
@@ -204,6 +291,10 @@ export async function searchSkinsDb(
   if (tradable) {
     where.quantity = { gt: 0 };
   }
+  const resolvedCategory = resolveSkinCategory(category);
+  const resolvedWeapon = resolveSkinWeaponKey(weapon);
+  const broadCategorySearch = resolvedCategory && (!q || q.trim().length < 2);
+  const broadWeaponSearch = resolvedWeapon && (!q || q.trim().length < 2);
 
   const orderBy =
     sort === "cheapest"
@@ -225,7 +316,10 @@ export async function searchSkinsDb(
   const [results, metaMap] = await Promise.all([
     client.skin.findMany({
       where,
-      take: limit,
+      take:
+        broadCategorySearch || broadWeaponSearch
+          ? Math.max(limit, 2000)
+          : limit,
       orderBy,
     }),
     getSkinMetaMap().catch(() => null),
@@ -276,6 +370,14 @@ export async function searchSkinsDb(
       };
     })
     .filter((item) => {
+      if (!resolvedCategory) return true;
+      return isWeaponInSkinCategory(item.weapon, item.name, resolvedCategory);
+    })
+    .filter((item) => {
+      if (!resolvedWeapon) return true;
+      return isWeaponMatchingFilter(item.weapon, item.name, resolvedWeapon);
+    })
+    .filter((item) => {
       if (!rarity || rarity === "all") return true;
       return item.rarity === rarity;
     })
@@ -283,6 +385,28 @@ export async function searchSkinsDb(
     .slice(0, limit);
 
   return normalized;
+}
+
+export async function getTrendingSkinsFromDb(limit = 33) {
+  const results = await searchSkinsDb({ limit, sort: "volume" });
+  const mapped = results.map((skin) => ({
+    name: skin.name,
+    weapon: skin.weapon,
+    skin: skin.skin,
+    wear: skin.wear ?? null,
+    price: skin.price ?? null,
+    volume7d: skin.volume7d ?? null,
+    median7d: skin.median7d ?? null,
+    quantity: skin.quantity ?? null,
+    rarity: skin.rarity,
+    itemPage: skin.itemPage ?? undefined,
+    marketPage: skin.marketPage ?? undefined,
+  }));
+
+  return {
+    featured: mapped.slice(0, 3),
+    trending: mapped.slice(3, limit),
+  };
 }
 
 export async function getSkinFromDb(
@@ -317,6 +441,9 @@ export async function getSkinFromDb(
     minFloat: record.minFloat ?? meta?.minFloat ?? null,
     maxFloat: record.maxFloat ?? meta?.maxFloat ?? null,
     price: record.price ?? null,
+    minPrice: null,
+    maxPrice: null,
+    meanPrice: null,
     medianPrice: record.medianPrice ?? null,
     suggestedPrice: record.suggestedPrice ?? null,
     quantity: record.quantity ?? null,
@@ -326,4 +453,241 @@ export async function getSkinFromDb(
     marketPage: record.marketPage,
     currency: record.currency,
   };
+}
+
+export type PriceHistoryPoint = {
+  date: string;
+  price: number;
+};
+
+const getPriceHistoryModel = (client: PrismaClient) => {
+  const anyClient = client as PrismaClient & {
+    priceHistory?: {
+      createMany: (args: { data: Array<Record<string, unknown>> }) => Promise<{ count: number }>;
+      findMany: (args: Record<string, unknown>) => Promise<Array<Record<string, unknown>>>;
+    };
+    priceSnapshot?: {
+      createMany: (args: { data: Array<Record<string, unknown>> }) => Promise<{ count: number }>;
+      findMany: (args: Record<string, unknown>) => Promise<Array<Record<string, unknown>>>;
+    };
+  };
+  return anyClient.priceHistory ?? anyClient.priceSnapshot ?? null;
+};
+
+export async function recordPriceHistory(client: PrismaClient = prisma) {
+  const skinportShopId = await getSkinportShopId(client);
+  const model = getPriceHistoryModel(client);
+  if (!model) {
+    return { total: 0, inserted: 0, capturedAt: new Date() };
+  }
+  const skins = await client.skin.findMany({
+    where: { price: { not: null } },
+    select: { id: true, price: true, currency: true },
+  });
+
+  const capturedAt = new Date();
+  const data: Array<{
+    skinId: number;
+    shopId: number;
+    currency: string;
+    price: number;
+    capturedAt: Date;
+  }> = [];
+
+  for (const skin of skins) {
+    if (skin.price === null) continue;
+    data.push({
+      skinId: skin.id,
+      shopId: skinportShopId,
+      currency: skin.currency ?? "EUR",
+      price: skin.price,
+      capturedAt,
+    });
+  }
+
+  const BATCH_SIZE = 1000;
+  let inserted = 0;
+  for (let i = 0; i < data.length; i += BATCH_SIZE) {
+    const chunk = data.slice(i, i + BATCH_SIZE);
+    const result = await model.createMany({ data: chunk });
+    inserted += result.count;
+  }
+
+  return { total: data.length, inserted, capturedAt };
+}
+
+export async function recordSkinPriceHistory(
+  marketHashName: string,
+  client: PrismaClient = prisma
+) {
+  if (!marketHashName) return { inserted: 0 };
+  const model = getPriceHistoryModel(client);
+  if (!model) return { inserted: 0 };
+
+  try {
+    const skin = await client.skin.findUnique({
+      where: { marketHashName },
+      select: { id: true, price: true, currency: true },
+    });
+
+    if (!skin || skin.price === null) return { inserted: 0 };
+
+    const skinportShopId = await getSkinportShopId(client);
+    const result = await model.createMany({
+      data: [
+        {
+          skinId: skin.id,
+          shopId: skinportShopId,
+          currency: skin.currency ?? "EUR",
+          price: skin.price,
+          capturedAt: new Date(),
+        },
+      ],
+    });
+
+    return { inserted: result.count };
+  } catch (err) {
+    console.error("recordSkinPriceHistory failed", err);
+    return { inserted: 0 };
+  }
+}
+
+export async function recordShopPriceHistory(
+  marketHashName: string,
+  shopPrices: ShopPrice[],
+  client: PrismaClient = prisma
+) {
+  if (!marketHashName || !shopPrices.length) return { inserted: 0 };
+  const model = getPriceHistoryModel(client);
+  if (!model) return { inserted: 0 };
+
+  try {
+    const skin = await client.skin.findUnique({
+      where: { marketHashName },
+      select: { id: true },
+    });
+    if (!skin) return { inserted: 0 };
+
+    const hasNumericPrice = (
+      shop: ShopPrice
+    ): shop is ShopPrice & { price: number } =>
+      typeof shop.price === "number" && Number.isFinite(shop.price);
+    const valid = shopPrices.filter(hasNumericPrice);
+    if (!valid.length) return { inserted: 0 };
+
+    const shopIds = await Promise.all(
+      valid.map((shop) =>
+        getShopId(
+          client,
+          shop.label,
+          shop.url ?? SHOP_URLS[shop.label] ?? null
+        )
+      )
+    );
+
+    const capturedAt = new Date();
+    const recentSince = new Date(capturedAt.getTime() - 1000 * 60 * 10);
+    const recentRows = (await model.findMany({
+      where: {
+        skinId: skin.id,
+        shopId: { in: shopIds },
+        capturedAt: { gte: recentSince },
+      },
+      orderBy: { capturedAt: "desc" },
+      select: { shopId: true, price: true, capturedAt: true },
+    })) as Array<{ shopId: number; price: number; capturedAt: Date }>;
+
+    const recentByShop = new Map<number, { price: number; capturedAt: Date }>();
+    for (const row of recentRows) {
+      if (!recentByShop.has(row.shopId)) {
+        recentByShop.set(row.shopId, { price: row.price, capturedAt: row.capturedAt });
+      }
+    }
+
+    const data: Array<{
+      skinId: number;
+      shopId: number;
+      currency: string;
+      price: number;
+      capturedAt: Date;
+    }> = [];
+
+    valid.forEach((shop, index) => {
+      const shopId = shopIds[index];
+      const recent = recentByShop.get(shopId);
+      if (recent && recent.price === shop.price) return;
+      data.push({
+        skinId: skin.id,
+        shopId,
+        currency: shop.currency ?? "EUR",
+        price: shop.price as number,
+        capturedAt,
+      });
+    });
+
+    if (!data.length) return { inserted: 0 };
+    const result = await model.createMany({ data });
+    return { inserted: result.count };
+  } catch (err) {
+    console.error("recordShopPriceHistory failed", err);
+    return { inserted: 0 };
+  }
+}
+
+export async function getSkinPriceHistory(
+  marketHashName: string,
+  days = 90,
+  shopName: string | null = SKINPORT_SHOP_NAME,
+  client: PrismaClient = prisma
+) {
+  if (!marketHashName) return { points: [], currency: "EUR" };
+
+  try {
+    const skin = await client.skin.findUnique({
+      where: { marketHashName },
+      select: { id: true, currency: true },
+    });
+
+    if (!skin) return { points: [], currency: "EUR" };
+
+    const model = getPriceHistoryModel(client);
+    if (!model) return { points: [], currency: skin.currency ?? "EUR" };
+
+    const shopId =
+      shopName && shopName.trim().length
+        ? await getShopId(client, shopName, SHOP_URLS[shopName])
+        : null;
+
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const where: {
+      skinId: number;
+      capturedAt: { gte: Date };
+      shopId?: number;
+    } = {
+      skinId: skin.id,
+      capturedAt: { gte: since },
+    };
+    if (shopId) {
+      where.shopId = shopId;
+    }
+
+    const rows = (await model.findMany({
+      where,
+      orderBy: { capturedAt: "asc" },
+      select: { capturedAt: true, price: true, currency: true },
+    })) as Array<{ capturedAt: Date; price: number; currency: string }>;
+
+    const points = rows.map((row) => ({
+      date: row.capturedAt.toISOString(),
+      price: row.price,
+    }));
+    const currency = rows.at(-1)?.currency ?? skin.currency ?? "EUR";
+
+    return { points, currency };
+  } catch (err) {
+    console.error("getSkinPriceHistory failed", err);
+    return { points: [], currency: "EUR" };
+  }
 }

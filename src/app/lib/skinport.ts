@@ -1,3 +1,12 @@
+import { getSkinMetaMap, lookupSkinMetaFromParsed } from "./skin-meta";
+import { resolveRarity } from "./rarity";
+import {
+  isWeaponMatchingFilter,
+  isWeaponInSkinCategory,
+  resolveSkinCategory,
+  resolveSkinWeaponKey,
+} from "./skin-categories";
+
 type PeriodStats = {
   min: number | null;
   max: number | null;
@@ -43,7 +52,7 @@ export type ParsedName = {
 export type TrendSkin = ParsedName & {
   name: string;
   price: number | null;
-  volume7d: number;
+  volume7d: number | null;
   median7d: number | null;
   quantity: number | null;
   rarity?: string | null;
@@ -218,8 +227,12 @@ export async function getTrendingSkins() {
       null;
 
     const parsed = parseMarketHashName(entry.market_hash_name);
-    const meta =
-      metaMap?.get(normalizeName(`${parsed.weapon} ${parsed.skin}`)) ?? null;
+    const meta = lookupSkinMetaFromParsed(
+      metaMap,
+      parsed.weapon,
+      parsed.skin,
+      entry.market_hash_name
+    );
 
     return {
       name: entry.market_hash_name,
@@ -247,6 +260,8 @@ export type SearchFilters = {
   q?: string;
   minPrice?: number;
   maxPrice?: number;
+  category?: string;
+  weapon?: string;
   tradable?: boolean;
   limit?: number;
   sort?: "volume" | "cheapest" | "most-expensive";
@@ -256,6 +271,8 @@ export async function searchSkins({
   q,
   minPrice,
   maxPrice,
+  category,
+  weapon,
   tradable,
   limit = 60,
   sort = "volume",
@@ -278,10 +295,36 @@ export async function searchSkins({
   );
 
   const qLower = q?.trim().toLowerCase() ?? "";
+  const resolvedCategory = resolveSkinCategory(category);
+  const resolvedWeapon = resolveSkinWeaponKey(weapon);
 
   const results: TrendSkin[] = Object.values(items)
     .filter((item) => {
       if (tradable && item.quantity <= 0) return false;
+      if (resolvedCategory) {
+        const parsed = parseMarketHashName(item.market_hash_name);
+        if (
+          !isWeaponInSkinCategory(
+            parsed.weapon,
+            item.market_hash_name,
+            resolvedCategory
+          )
+        ) {
+          return false;
+        }
+      }
+      if (resolvedWeapon) {
+        const parsed = parseMarketHashName(item.market_hash_name);
+        if (
+          !isWeaponMatchingFilter(
+            parsed.weapon,
+            item.market_hash_name,
+            resolvedWeapon
+          )
+        ) {
+          return false;
+        }
+      }
       if (qLower && !item.market_hash_name.toLowerCase().includes(qLower))
         return false;
       const price = item.min_price ?? item.median_price ?? item.suggested_price;
@@ -294,8 +337,12 @@ export async function searchSkins({
     .map((item) => {
       const hist = historyMap[item.market_hash_name.toLowerCase()];
       const parsed = parseMarketHashName(item.market_hash_name);
-      const meta =
-        metaMap?.get(normalizeName(`${parsed.weapon} ${parsed.skin}`)) ?? null;
+      const meta = lookupSkinMetaFromParsed(
+        metaMap,
+        parsed.weapon,
+        parsed.skin,
+        item.market_hash_name
+      );
       const price =
         item.min_price ?? item.median_price ?? item.suggested_price ?? null;
       return {
@@ -358,8 +405,12 @@ export async function getSkinByName(name: string): Promise<SkinDetail | null> {
     itemCandidate?.market_hash_name ?? historyEntry?.market_hash_name ?? name;
 
   const parsed = parseMarketHashName(resolvedName);
-  const meta =
-    metaMap?.get(normalizeName(`${parsed.weapon} ${parsed.skin}`)) ?? null;
+  const meta = lookupSkinMetaFromParsed(
+    metaMap,
+    parsed.weapon,
+    parsed.skin,
+    resolvedName
+  );
 
   const priceCandidate =
     itemCandidate?.min_price ??
@@ -386,5 +437,3 @@ export async function getSkinByName(name: string): Promise<SkinDetail | null> {
     ...parsed,
   };
 }
-import { getSkinMetaMap, lookupSkinMeta, normalizeName } from "./skin-meta";
-import { resolveRarity } from "./rarity";

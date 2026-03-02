@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchSkinsDb } from "@/app/lib/skin-database";
+import { searchSkinsLocal } from "@/app/lib/skin-catalog";
 import { searchSkins } from "@/app/lib/skinport";
+import {
+  resolveSkinCategory,
+  resolveSkinWeaponKey,
+} from "@/app/lib/skin-categories";
+
+export const dynamic = "force-dynamic";
 
 const parseNumberParam = (value: string | null) => {
   if (value === null) return undefined;
@@ -16,6 +23,11 @@ const parseIntParam = (value: string | null) => {
   if (!trimmed) return undefined;
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const clampLimit = (value: number | undefined, fallback = 120) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(value, 1), 2000);
 };
 
 export async function GET(req: NextRequest) {
@@ -39,15 +51,19 @@ export async function GET(req: NextRequest) {
 
     const q = rawQ.trim();
     const rarity = searchParams.get("rarity") ?? undefined;
+    const category = resolveSkinCategory(searchParams.get("category")) ?? undefined;
+    const weapon = resolveSkinWeaponKey(searchParams.get("weapon")) ?? undefined;
     const minPrice = parseNumberParam(searchParams.get("minPrice"));
     const maxPrice = parseNumberParam(searchParams.get("maxPrice"));
-    const limit = parseIntParam(searchParams.get("limit"));
+    const limit = clampLimit(parseIntParam(searchParams.get("limit")));
     const sortParam = searchParams.get("sort");
     const sort: "volume" | "cheapest" | "most-expensive" =
       sortParam === "cheapest" || sortParam === "most-expensive" ? sortParam : "volume";
     const tradable = searchParams.get("tradable") === "1";
 
     const hasFilters =
+      !!category ||
+      !!weapon ||
       (rarity && rarity !== "all") ||
       minPrice !== undefined ||
       maxPrice !== undefined;
@@ -59,6 +75,8 @@ export async function GET(req: NextRequest) {
     const baseFilters = {
       q,
       rarity,
+      category,
+      weapon,
       minPrice,
       maxPrice,
       limit,
@@ -71,14 +89,26 @@ export async function GET(req: NextRequest) {
       if (!Array.isArray(items)) {
         console.error("Skin DB search returned a non-array response", { items });
         // Continue to fallback
-      } else {
+      } else if (items.length) {
         return NextResponse.json({ items });
       }
     } catch (error) {
-      console.error("Skin DB search failed, falling back to Skinport live API", error);
+      console.error("Skin DB search failed, falling back to local catalog", error);
     }
 
-    // Fallback to external API
+    // Fallback to local catalog (offline JSON)
+    try {
+      const items = await searchSkinsLocal(baseFilters);
+      if (!Array.isArray(items)) {
+        console.error("Local catalog returned a non-array response", { items });
+      } else if (items.length) {
+        return NextResponse.json({ items, fallback: "local" });
+      }
+    } catch (localErr) {
+      console.error("Local catalog search failed", localErr);
+    }
+
+    // Last resort: external API
     try {
       const items = await searchSkins(baseFilters);
       if (!Array.isArray(items)) {

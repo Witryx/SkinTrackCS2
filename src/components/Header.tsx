@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -13,7 +13,6 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // ✔ zavírání menu kliknutím mimo
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -24,7 +23,6 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // načítání profilu
   useEffect(() => {
     const url = new URL(window.location.href);
     const id = url.searchParams.get("steamId");
@@ -63,79 +61,92 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[color:var(--bg)]/80 backdrop-blur">
-      <div className="container-max h-16 flex items-center justify-between">
-
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Image src="/logo.png" alt="SkinTrack CS2 Logo" width={32} height={32} className="rounded-md" />
-          <span>SkinTrack CS2</span>
+    <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--bg)] backdrop-blur">
+      <div className="container-max h-16 flex items-center justify-between gap-4">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] shadow-sm">
+            <Image
+              src="/logo.png"
+              alt="SkinTrack CS2"
+              width={28}
+              height={28}
+              className="rounded-lg"
+            />
+          </span>
+          <div className="leading-tight">
+            <div className="kicker">SkinTrack</div>
+            <div className="text-lg font-semibold">CS2 Market</div>
+          </div>
         </Link>
 
-        <nav className="flex items-center gap-3 sm:gap-4">
-          <Link href="/" className="rounded-lg px-3 py-2 text-sm hover:bg-white/5 transition">
-            Domů
+        <nav className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/"
+            className="rounded-full px-3 py-2 text-sm text-[color:var(--muted)] transition hover:bg-[color:var(--card)] hover:text-[color:var(--fg)]"
+          >
+            Domu
           </Link>
 
-          <Link href="/explorer" className="rounded-lg px-3 py-2 text-sm hover:bg-white/5 transition">
+          <Link
+            href="/explorer"
+            className="rounded-full px-3 py-2 text-sm text-[color:var(--muted)] transition hover:bg-[color:var(--card)] hover:text-[color:var(--fg)]"
+          >
             Explorer
           </Link>
 
           <ThemeToggle />
 
-          {/* 🔥 NEPŘIHLÁŠENÝ */}
           {!steamId && (
             <button
               onClick={() => (window.location.href = "/api/steam/login")}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-2 rounded transition"
+              className="btn-primary text-sm"
             >
-              Přihlásit přes Steam
+              Prihlasit pres Steam
             </button>
           )}
 
-          {/* 🔥 PŘIHLÁŠENÝ */}
           {steamId && (
             <div className="relative" ref={menuRef}>
-              {/* Avatar + jméno */}
               <button
                 onClick={() => setOpen(!open)}
-                className="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 transition"
+                className="flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-2 py-1 text-sm transition hover:border-[color:var(--accent)]"
               >
-                <img src={steamAvatar || ""} alt="Avatar" className="w-8 h-8 rounded-full" />
-                <span className="text-sm">{steamName}</span>
+                <img
+                  src={steamAvatar || ""}
+                  alt="Avatar"
+                  className="h-8 w-8 rounded-full"
+                />
+                <span className="hidden sm:inline">{steamName}</span>
               </button>
 
-              {/* 🔻 DROPDOWN MENU */}
               {open && (
-                <div className="absolute left-0 mt-2 w-56 bg-[#0d1117] border border-white/10 rounded-lg shadow-xl 
-                  animate-[fadeIn_0.15s_ease-out,slideDown_0.15s_ease-out] overflow-hidden z-50">
-
+                <div className="absolute right-0 mt-2 w-56 card p-2 shadow-lg animate-fade-slide">
                   <Link
                     href="/favorites"
-                    className="block px-4 py-2 text-sm hover:bg-white/5 transition opacity-50 cursor-not-allowed"
+                    className="block rounded-lg px-3 py-2 text-sm text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
                   >
-                    ⭐ Oblíbené skiny (brzy)
+                    Oblibene skiny (brzy)
                   </Link>
 
                   <Link
                     href="/inventory"
-                    className="block px-4 py-2 text-sm hover:bg-white/5 transition opacity-50 cursor-not-allowed"
+                    className="block rounded-lg px-3 py-2 text-sm text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
                   >
-                    🎒 Inventář (brzy)
+                    Inventar
                   </Link>
 
                   <Link
                     href="/tradeup"
-                    className="block px-4 py-2 text-sm hover:bg-white/5 transition opacity-50 cursor-not-allowed"
+                    className="block rounded-lg px-3 py-2 text-sm text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
                   >
-                    🔧 Trade-up sim (brzy)
+                    Trade-up simulator
                   </Link>
 
                   <button
                     onClick={logout}
-                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition"
+                    className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm text-rose-500 hover:bg-rose-500/10"
                   >
-                    🚪 Odhlásit
+                    Odhlasit
                   </button>
                 </div>
               )}
@@ -143,18 +154,7 @@ export default function Header() {
           )}
         </nav>
       </div>
-
-      {/* Animace */}
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideDown {
-          from { transform: translateY(-4px); }
-          to { transform: translateY(0); }
-        }
-      `}</style>
     </header>
   );
 }
+

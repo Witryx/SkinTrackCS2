@@ -1,0 +1,3 @@
+PO 10 MIN : schtasks /Change /TN "SkinTrackCS2 Cron" /Enable
+schtasks /Change /TN "SkinTrackCS2 Cron" /Enable
+schtasks /Run /TN "SkinTrackCS2 Cron"

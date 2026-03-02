@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
@@ -26,10 +26,11 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:bg-white/5 transition"
-      title="Přepnout téma"
+      className="btn-ghost text-xs"
+      title="Prepnout tema"
     >
-      {dark ? "🌙 Dark" : "☀️ Light"}
+      {dark ? "Dark" : "Light"}
     </button>
   );
 }
+

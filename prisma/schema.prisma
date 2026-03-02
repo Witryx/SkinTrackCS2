@@ -40,7 +40,7 @@ model Skin {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
-  priceSnapshots PriceSnapshot[]
+  priceHistory   PriceHistory[]
   favorites      Favorite[]
 
   @@index([weapon, skin])
@@ -55,10 +55,10 @@ model Shop {
   url       String?
   createdAt DateTime        @default(now())
 
-  priceSnapshots PriceSnapshot[]
+  priceHistory PriceHistory[]
 }
 
-model PriceSnapshot {
+model PriceHistory {
   id         Int      @id @default(autoincrement())
   skinId     Int
   shopId     Int
@@ -70,6 +70,7 @@ model PriceSnapshot {
   shop Shop @relation(fields: [shopId], references: [id])
 
   @@index([skinId, capturedAt])
+  @@map("PriceSnapshot")
 }
 
 model Favorite {

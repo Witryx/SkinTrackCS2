@@ -13,7 +13,9 @@
     "next": "14.2.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "steam-login": "^0.1.7"
+    "recharts": "^2.12.7",
+    "steam-login": "^0.1.7",
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
