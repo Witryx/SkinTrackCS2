@@ -53,6 +53,7 @@ type EnrichedInventoryItem = InventoryItem & {
   rarity: Rarity;
   category: Category;
   typeGroup: string;
+  supportsFloat: boolean;
   wearName: WearName | null;
   floatEstimate: number | null;
   floatSource: "exact" | "steam" | "estimated" | "unknown";
@@ -87,6 +88,13 @@ const rarityCardClass: Record<Rarity, string> = {
     "bg-[color:var(--card)] border-fuchsia-400/70 shadow-[0_0_0_1px_rgba(232,121,249,0.36),0_14px_30px_rgba(112,26,117,0.36)] hover:border-fuchsia-300/90",
   Covert:
     "bg-[color:var(--card)] border-red-400/75 shadow-[0_0_0_1px_rgba(248,113,113,0.44),0_16px_34px_rgba(127,29,29,0.34)] hover:border-red-300/95",
+};
+
+const categoryBadgeClass: Record<Exclude<Category, "Normal">, string> = {
+  StatTrak:
+    "border border-amber-300/45 bg-amber-500/20 text-amber-100",
+  Souvenir:
+    "border border-amber-200/55 bg-amber-300/20 text-amber-50",
 };
 
 const sortOptions: Array<{ value: SortMode; label: string }> = [
@@ -184,10 +192,10 @@ const rarityFromType = (itemType?: string | null): Rarity | null => {
   if (normalized.includes("glove")) return "Covert";
   return null;
 };
-const detectCategory = (marketHashName: string): Category => {
-  const normalized = marketHashName.toLowerCase();
-  if (normalized.startsWith("stattrak")) return "StatTrak";
-  if (normalized.startsWith("souvenir")) return "Souvenir";
+const detectCategory = (marketHashName: string, itemType?: string | null): Category => {
+  const normalized = `${marketHashName} ${itemType ?? ""}`.toLowerCase();
+  if (normalized.includes("stattrak")) return "StatTrak";
+  if (normalized.includes("souvenir")) return "Souvenir";
   return "Normal";
 };
 
@@ -234,6 +242,14 @@ const formatStat = (value: number | null | undefined) =>
 
 const formatFloat = (value: number | null | undefined) =>
   typeof value === "number" ? value.toFixed(4) : "-";
+
+const getFloatLabel = (
+  value: number | null | undefined,
+  source?: "exact" | "steam" | "estimated" | "unknown"
+) => {
+  if (typeof value !== "number") return null;
+  return `${source === "estimated" ? "~" : ""}${formatFloat(value)}`;
+};
 
 const splitMarketName = (name: string) => {
   const [weaponRaw, restRaw] = name.split("|").map((part) => part?.trim() ?? "");
@@ -379,12 +395,17 @@ export default function InventoryPage() {
         rarityFromTag(item.rarityTag ?? null) ??
         rarityFromType(item.type) ??
         resolveRarity(price ?? null);
-      const category = detectCategory(item.marketHashName);
+      const category = detectCategory(item.marketHashName, item.type);
       const typeGroup = detectTypeGroup(item.type);
       const wearName = parseWear(item.marketHashName, item.exterior);
+      const supportsFloat = wearName !== null;
       const wearRange = wearName ? wearRanges[wearName] : null;
-      const floatFromInspect = parseUnknownNumber(exactFloatMap[item.assetId]);
-      const floatFromItem = parseUnknownNumber(item.floatValue);
+      const floatFromInspect = supportsFloat
+        ? parseUnknownNumber(exactFloatMap[item.assetId])
+        : null;
+      const floatFromItem = supportsFloat
+        ? parseUnknownNumber(item.floatValue)
+        : null;
       const floatEstimate =
         floatFromInspect ??
         floatFromItem ??
@@ -406,6 +427,7 @@ export default function InventoryPage() {
         rarity,
         category,
         typeGroup,
+        supportsFloat,
         wearName,
         floatEstimate,
         floatSource,
@@ -525,11 +547,17 @@ export default function InventoryPage() {
     );
   }, [sortedItems, selectedAssetId]);
 
+  const selectedItemFloatLabel = getFloatLabel(
+    selectedItem?.floatEstimate,
+    selectedItem?.floatSource
+  );
+
   useEffect(() => {
     const hasResolvedExact = (assetId: string) =>
       Object.prototype.hasOwnProperty.call(exactFloatMap, assetId);
 
     const needsExactFloat = (item: EnrichedInventoryItem | null | undefined) => {
+      if (!item?.supportsFloat) return false;
       if (!item?.inspectLink) return false;
       if (parseUnknownNumber(item.floatValue) !== null) return false;
       return !hasResolvedExact(item.assetId);
@@ -800,11 +828,10 @@ export default function InventoryPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {sortedItems.map((item) => {
                 const selected = item.assetId === selectedItem?.assetId;
-                const wearShort = item.wearName ? wearRanges[item.wearName].short : "--";
-                const floatLabel =
-                  item.floatEstimate !== null
-                    ? `${item.floatSource === "estimated" ? "~" : ""}${formatFloat(item.floatEstimate)}`
-                    : "-";
+                const wearShort = item.wearName ? wearRanges[item.wearName].short : null;
+                const floatLabel = getFloatLabel(item.floatEstimate, item.floatSource);
+                const floatMeta = [wearShort, floatLabel].filter(Boolean).join(" ");
+                const priceMeta = floatLabel ? `Float ${floatLabel}` : wearShort;
                 const parsed = splitMarketName(item.marketHashName);
                 return (
                   <button
@@ -814,18 +841,30 @@ export default function InventoryPage() {
                       rarityCardClass[item.rarity]
                     } ${selected ? "ring-2 ring-[color:var(--accent-2)]" : "ring-0"}`}
                   >
-                    <div className="mb-2 flex items-start justify-between">
-                      <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--muted)]">{item.typeGroup}</span>
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--muted)]">
+                          {item.typeGroup}
+                        </span>
+                        {item.category !== "Normal" && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${categoryBadgeClass[item.category]}`}
+                          >
+                            {item.category}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1">
                         {item.amount > 1 && (
                           <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--muted)]">
                             x{item.amount}
                           </span>
                         )}
-                        <span className="text-[11px] text-[color:var(--muted)]">
-                          {wearShort !== "--" ? `${wearShort} ` : ""}
-                          {floatLabel}
-                        </span>
+                        {floatMeta && (
+                          <span className="text-[11px] text-[color:var(--muted)]">
+                            {floatMeta}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="mb-3 flex h-28 items-center justify-center overflow-hidden rounded-2xl border border-slate-700/70 bg-[radial-gradient(circle_at_50%_28%,rgba(40,113,255,0.4),rgba(3,9,22,0.95)_72%)] px-2 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.14)]">
@@ -844,13 +883,11 @@ export default function InventoryPage() {
                     <div className="mb-3 line-clamp-1 text-sm text-[color:var(--muted)]">{parsed.skin}</div>
                     <div className="flex items-center justify-between rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] px-3 py-2 text-sm">
                       <span className="font-semibold">{item.price !== null ? currency.format(item.price) : "-"}</span>
-                      <span className="text-xs text-[color:var(--muted)]">
-                        {floatLabel !== "-"
-                          ? `Float ${floatLabel}`
-                          : wearShort !== "--"
-                            ? wearShort
-                            : "-"}
-                      </span>
+                      {priceMeta && (
+                        <span className="text-xs text-[color:var(--muted)]">
+                          {priceMeta}
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
@@ -876,14 +913,23 @@ export default function InventoryPage() {
                 <div>
                   <div className="text-3xl font-semibold leading-tight">{splitMarketName(selectedItem.marketHashName).weapon}</div>
                   <div className="text-2xl font-semibold">{splitMarketName(selectedItem.marketHashName).skin}</div>
-                  {(selectedItem.wearName || selectedItem.floatEstimate !== null) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-2.5 py-1 text-xs font-semibold text-[color:var(--muted)]">
+                      {selectedItem.typeGroup}
+                    </span>
+                    {selectedItem.category !== "Normal" && (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${categoryBadgeClass[selectedItem.category]}`}
+                      >
+                        {selectedItem.category}
+                      </span>
+                    )}
+                  </div>
+                  {(selectedItem.wearName || selectedItemFloatLabel) && (
                     <div className="mt-1 text-sm text-[color:var(--accent-2)]">
-                      {selectedItem.wearName ? `${selectedItem.wearName} ` : ""}
-                      (
-                      {selectedItem.floatEstimate !== null
-                        ? `${selectedItem.floatSource === "estimated" ? "~" : ""}${formatFloat(selectedItem.floatEstimate)}`
-                        : "-"}
-                      )
+                      {[selectedItem.wearName, selectedItemFloatLabel ? `(${selectedItemFloatLabel})` : null]
+                        .filter(Boolean)
+                        .join(" ")}
                     </div>
                   )}
                   {floatLoadingAssetId === selectedItem.assetId && (
@@ -898,6 +944,7 @@ export default function InventoryPage() {
                     <span className="font-semibold">{selectedItem.price !== null ? currency.format(selectedItem.price) : "-"}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Mnozstvi</span><span>x{selectedItem.amount}</span></div>
+                  <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Category</span><span>{selectedItem.category}</span></div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Collection</span><span>{selectedItem.collectionValue}</span></div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Rarity</span><span>{selectedItem.rarity}</span></div>
                 </div>
