@@ -763,24 +763,26 @@ export default function InventoryPage() {
 
   return (
     <section className="container-max py-8">
-      <div className="card p-4 sm:p-6">
-        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="space-y-5">
+        <div className="market-stage p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-end gap-5">
             <div>
-              <h1 className="display text-4xl font-semibold tracking-tight">Inventory</h1>
+              <div className="kicker">Steam</div>
+              <h1 className="display text-4xl">Inventory</h1>
             </div>
-            <div className="text-sm text-[color:var(--muted)]">
+            <div className="stat-tile min-w-28 text-sm text-[color:var(--muted)]">
               <div>Items</div>
-              <div className="text-2xl font-semibold">{formatStat(totals.amount)}</div>
+              <div className="text-2xl font-black text-[color:var(--fg)]">{formatStat(totals.amount)}</div>
             </div>
-            <div className="text-sm text-[color:var(--muted)]">
+            <div className="stat-tile min-w-32 text-sm text-[color:var(--muted)]">
               <div>Value</div>
-              <div className="text-2xl font-semibold">{currency.format(totals.sum)}</div>
+              <div className="text-2xl font-black text-[color:var(--fg)]">{currency.format(totals.sum)}</div>
             </div>
           </div>
 
           <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
-            <div className="min-w-[250px] flex-1 rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-4 py-2 lg:min-w-[320px] lg:flex-none">
+            <div className="min-w-[250px] flex-1 rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] px-4 py-3 lg:min-w-[320px] lg:flex-none">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -801,6 +803,7 @@ export default function InventoryPage() {
               Filters
             </button>
           </div>
+        </div>
         </div>
         {(error || priceError || floatError) && (
           <div className="mb-4 rounded-xl border border-rose-400/40 bg-rose-500/15 px-4 py-3 text-sm text-rose-200">
@@ -826,15 +829,15 @@ export default function InventoryPage() {
           {priceLoading && <span className="text-xs text-[color:var(--muted)]">Nacitani cen...</span>}
           {!priceLoading && priceLastSyncedAt && (
             <span className="text-xs text-[color:var(--muted)]">
-              Ceny {formatDateTime(priceLastSyncedAt)} • live {priceSummary.live} •
-              cache {priceSummary.cached} • stale {priceSummary.stale}
-              {priceSummary.missing ? ` • bez ceny ${priceSummary.missing}` : ""}
+              Ceny {formatDateTime(priceLastSyncedAt)} / live {priceSummary.live} /
+              cache {priceSummary.cached} / stale {priceSummary.stale}
+              {priceSummary.missing ? ` / bez ceny ${priceSummary.missing}` : ""}
             </span>
           )}
         </div>
 
         {filtersOpen && (
-          <div className="mb-4 card p-4 sm:p-5">
+          <div className="surface mb-4 p-4 sm:p-5">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-xl font-semibold">Filters</div>
               <button onClick={clearAllFilters} className="text-xs font-semibold text-[color:var(--accent-2)] hover:underline">
@@ -941,7 +944,7 @@ export default function InventoryPage() {
                   <button
                     key={item.assetId}
                     onClick={() => setSelectedAssetId(item.assetId)}
-                    className={`rounded-3xl border-2 p-3 text-left transition hover:-translate-y-0.5 ${
+                    className={`rounded-2xl border-2 p-3 text-left transition hover:-translate-y-0.5 ${
                       rarityCardClass[item.rarity]
                     } ${selected ? "ring-2 ring-[color:var(--accent-2)]" : "ring-0"}`}
                   >
@@ -971,7 +974,7 @@ export default function InventoryPage() {
                         )}
                       </div>
                     </div>
-                    <div className="mb-3 flex h-28 items-center justify-center overflow-hidden rounded-2xl border border-slate-700/70 bg-[radial-gradient(circle_at_50%_28%,rgba(40,113,255,0.4),rgba(3,9,22,0.95)_72%)] px-2 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.14)]">
+                    <div className="market-stage mb-3 flex h-28 items-center justify-center overflow-hidden px-2">
                       {item.iconUrl ? (
                         <img
                           src={getSteamIconUrl(item.iconUrl)}
@@ -985,8 +988,8 @@ export default function InventoryPage() {
                     </div>
                     <div className="mb-1 line-clamp-1 text-sm font-semibold">{parsed.weapon}</div>
                     <div className="mb-3 line-clamp-1 text-sm text-[color:var(--muted)]">{parsed.skin}</div>
-                    <div className="flex items-center justify-between rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] px-3 py-2 text-sm">
-                      <span className="font-semibold">{item.price !== null ? currency.format(item.price) : "-"}</span>
+                    <div className="flex items-center justify-between rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2 text-sm">
+                      <span className="font-black">{item.price !== null ? currency.format(item.price) : "-"}</span>
                       {priceMeta && (
                         <span className="text-xs text-[color:var(--muted)]">
                           {priceMeta}
@@ -999,11 +1002,11 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <aside className="h-fit card p-5 xl:sticky xl:top-24">
+          <aside className="card h-fit p-5 xl:sticky xl:top-24">
             {!selectedItem && <div className="text-sm text-[color:var(--muted)]">Vyber item z inventare.</div>}
             {selectedItem && (
               <div className="space-y-4">
-                <div className="overflow-hidden rounded-2xl border border-slate-700/70 bg-[radial-gradient(circle_at_50%_28%,rgba(40,113,255,0.4),rgba(3,9,22,0.95)_72%)] p-4 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.14)]">
+                <div className="market-stage overflow-hidden p-4">
                   {selectedItem.iconUrl ? (
                     <img
                       src={getSteamIconUrl(selectedItem.iconUrl)}
@@ -1042,7 +1045,7 @@ export default function InventoryPage() {
                     </div>
                   )}
                 </div>
-                <div className="space-y-2 rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-3">
+                <div className="space-y-2 rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-3">
                   <div className="flex items-center justify-between text-sm">
                     <span>Price</span>
                     <span className="font-semibold">{selectedItem.price !== null ? currency.format(selectedItem.price) : "-"}</span>

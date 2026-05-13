@@ -129,12 +129,14 @@ export default function WishlistButton({
         compact ? "h-8 px-2.5 text-[11px]" : "h-9 px-3 text-xs",
         wished
           ? "border-emerald-300/55 bg-emerald-500/18 text-emerald-100 hover:bg-emerald-500/25"
-          : "border-slate-500/50 bg-slate-950/55 text-slate-200 hover:border-cyan-300/55 hover:bg-cyan-500/15",
+          : "border-[color:var(--border)] bg-[color:var(--surface-soft)] text-[color:var(--muted)] hover:border-[color:var(--accent)] hover:text-[color:var(--fg)]",
         className
       )}
       title={wished ? "Odebrat z wishlistu" : "Pridat do wishlistu"}
     >
-      <span aria-hidden="true">{wished ? "-" : "+"}</span>
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill={wished ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+        <path d="M12 21s-7-4.35-9.33-8.25C.92 9.82 2.45 6 5.86 6A5.02 5.02 0 0 1 12 8.2 5.02 5.02 0 0 1 18.14 6c3.41 0 4.94 3.82 3.19 6.75C19 16.65 12 21 12 21Z" />
+      </svg>
       <span>{compact ? "Wishlist" : wished ? "Ve wishlistu" : "Wishlist"}</span>
     </button>
   );

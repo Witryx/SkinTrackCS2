@@ -1,10 +1,10 @@
 ﻿export default function Footer() {
   return (
-    <footer className="mt-12 border-t border-[color:var(--border)]">
-      <div className="container-max py-6 text-sm text-[color:var(--muted)] flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>© {new Date().getFullYear()} SkinTrack CS2</p>
+    <footer className="mt-16 border-t border-[color:var(--border)]">
+      <div className="container-max flex flex-col items-center justify-between gap-3 py-8 text-sm text-[color:var(--muted)] sm:flex-row">
+        <p>SkinTrack CS2 / {new Date().getFullYear()}</p>
         <p>
-          Vyrobil s radosti{" "}
+          Projekt{" "}
           <a
             className="link"
             href="https://github.com/Witryx"

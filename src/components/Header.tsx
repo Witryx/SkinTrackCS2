@@ -5,11 +5,19 @@ import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
 import { useEffect, useRef, useState } from "react";
 import NotificationBell from "./NotificationBell";
+import { usePathname } from "next/navigation";
+
+const navItems = [
+  { href: "/", label: "Domu" },
+  { href: "/explorer", label: "Explorer" },
+  { href: "/tradeup", label: "Trade-up sim" },
+] as const;
 
 export default function Header() {
   const [steamId, setSteamId] = useState<string | null>(null);
   const [steamName, setSteamName] = useState<string | null>(null);
   const [steamAvatar, setSteamAvatar] = useState<string | null>(null);
+  const pathname = usePathname();
 
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -62,43 +70,55 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--bg)] backdrop-blur">
-      <div className="container-max h-16 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-3">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] shadow-sm">
+    <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--bg)] shadow-[0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl">
+      <div className="container-max flex min-h-[4.5rem] items-center justify-between gap-4 py-3">
+        <Link href="/" className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:var(--border-strong)] bg-[color:var(--card-solid)] shadow-sm">
             <Image
               src="/logo.png"
               alt="SkinTrack CS2"
-              width={28}
-              height={28}
-              className="rounded-lg"
+              width={32}
+              height={32}
+              className="rounded-xl"
             />
           </span>
-          <div className="leading-tight">
-            <div className="kicker">SkinTrack</div>
-            <div className="text-lg font-semibold">CS2 Market</div>
+          <div className="min-w-0 leading-tight">
+            <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">
+              SkinTrack
+            </div>
+            <div className="truncate text-lg font-black">CS2 Market</div>
           </div>
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/"
-            className="rounded-full px-3 py-2 text-sm text-[color:var(--muted)] transition hover:bg-[color:var(--card)] hover:text-[color:var(--fg)]"
-          >
-            Domu
-          </Link>
-
-          <Link
-            href="/explorer"
-            className="rounded-full px-3 py-2 text-sm text-[color:var(--muted)] transition hover:bg-[color:var(--card)] hover:text-[color:var(--fg)]"
-          >
-            Explorer
-          </Link>
+        <nav className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+          <div className="hidden items-center rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-1 sm:flex">
+            {navItems.map((item) => {
+              const active =
+                item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                    active
+                      ? "bg-[color:var(--card-solid)] text-[color:var(--fg)] shadow-sm"
+                      : "text-[color:var(--muted)] hover:text-[color:var(--fg)]"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
 
           {steamId && (
             <Link
               href="/wishlist"
-              className="rounded-full px-3 py-2 text-sm text-[color:var(--muted)] transition hover:bg-[color:var(--card)] hover:text-[color:var(--fg)]"
+              className={`hidden rounded-xl border px-3 py-2 text-sm font-semibold transition md:inline-flex ${
+                pathname?.startsWith("/wishlist")
+                  ? "border-[color:var(--accent)] bg-[color:var(--card-solid)] text-[color:var(--fg)]"
+                  : "border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--muted)] hover:text-[color:var(--fg)]"
+              }`}
             >
               Wishlist
             </Link>
@@ -110,7 +130,7 @@ export default function Header() {
           {!steamId && (
             <button
               onClick={() => (window.location.href = "/api/steam/login")}
-              className="btn-primary text-sm"
+              className="btn-primary hidden text-sm md:inline-flex"
             >
               Prihlasit pres Steam
             </button>
@@ -120,42 +140,52 @@ export default function Header() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setOpen(!open)}
-                className="flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-2 py-1 text-sm transition hover:border-[color:var(--accent)]"
+                className="flex h-11 items-center gap-2 rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-2 py-1 text-sm font-semibold transition hover:border-[color:var(--accent)]"
               >
-                <img
-                  src={steamAvatar || ""}
-                  alt="Avatar"
-                  className="h-8 w-8 rounded-full"
-                />
-                <span className="hidden sm:inline">{steamName}</span>
+                {steamAvatar ? (
+                  <img
+                    src={steamAvatar}
+                    alt="Avatar"
+                    className="h-8 w-8 rounded-xl"
+                  />
+                ) : (
+                  <span className="h-8 w-8 rounded-xl bg-[color:var(--surface-strong)]" />
+                )}
+                <span className="hidden max-w-32 truncate sm:inline">{steamName}</span>
               </button>
 
               {open && (
-                <div className="absolute right-0 mt-2 w-56 card p-2 shadow-lg animate-fade-slide">
+                <div className="card absolute right-0 mt-2 w-60 p-2 shadow-lg animate-fade-slide">
+                  <Link
+                    href="/explorer"
+                    className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)] sm:hidden"
+                  >
+                    Explorer
+                  </Link>
                   <Link
                     href="/wishlist"
-                    className="block rounded-lg px-3 py-2 text-sm text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
+                    className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)]"
                   >
                     Wishlist
                   </Link>
 
                   <Link
                     href="/inventory"
-                    className="block rounded-lg px-3 py-2 text-sm text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
+                    className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)]"
                   >
                     Inventar
                   </Link>
 
                   <Link
                     href="/tradeup"
-                    className="block rounded-lg px-3 py-2 text-sm text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
+                    className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)]"
                   >
                     Trade-up simulator
                   </Link>
 
                   <button
                     onClick={logout}
-                    className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm text-rose-500 hover:bg-rose-500/10"
+                    className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-500 hover:bg-rose-500/10"
                   >
                     Odhlasit
                   </button>

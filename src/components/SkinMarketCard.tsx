@@ -105,14 +105,14 @@ export default function SkinMarketCard({
     !!skinLabel && normalizeLabel(weaponLabel) !== normalizeLabel(skinLabel);
 
   const rootCardClass = join(
-    "group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.45rem] border bg-[#030d24] transition",
+    "group relative flex cursor-pointer flex-col overflow-hidden rounded-[0.95rem] border bg-[color:var(--card-solid)] transition",
     souvenir
       ? compact
-        ? "border-amber-300/70 shadow-[0_12px_34px_rgba(245,158,11,0.24)] hover:border-amber-200/90"
-        : "border-amber-300/70 shadow-[0_18px_48px_rgba(245,158,11,0.28)] hover:-translate-y-1 hover:border-amber-200/90"
+        ? "border-amber-300/60 shadow-[var(--shadow-soft)] hover:border-amber-300/90"
+        : "border-amber-300/60 shadow-[var(--shadow)] hover:-translate-y-1 hover:border-amber-300/90"
       : compact
-        ? "border-cyan-400/20 shadow-[0_12px_30px_rgba(2,8,23,0.58)] hover:border-emerald-300/35"
-        : "border-cyan-400/25 shadow-[0_18px_46px_rgba(2,8,23,0.66)] hover:-translate-y-1 hover:border-emerald-300/45",
+        ? "border-[color:var(--border)] shadow-[var(--shadow-soft)] hover:border-[color:var(--accent)]"
+        : "border-[color:var(--border)] shadow-[var(--shadow)] hover:-translate-y-1 hover:border-[color:var(--accent)]",
     className
   );
 
@@ -137,7 +137,7 @@ export default function SkinMarketCard({
       onClick={onCardClick}
       onKeyDown={onCardKeyDown}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(150%_95%_at_50%_0%,rgba(33,131,255,0.2),rgba(2,9,24,0)_62%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,rgba(34,211,238,0.1),transparent_45%),linear-gradient(315deg,rgba(245,158,11,0.08),transparent_45%)]" />
       <div className="relative z-10 flex h-full flex-col">
         <div className={join(compact ? "px-3.5 pt-3.5 pb-3.5" : "px-4 pt-4 pb-4")}>
           <div className="flex items-center justify-between gap-2">
@@ -167,7 +167,7 @@ export default function SkinMarketCard({
 
           <div
             className={join(
-              "mt-2 flex items-center justify-center overflow-hidden rounded-2xl border border-slate-700/65 bg-[radial-gradient(circle_at_50%_28%,rgba(40,113,255,0.34),rgba(3,9,22,0.95)_72%)] px-3",
+              "market-stage mt-3 flex items-center justify-center overflow-hidden px-3",
               compact ? "h-40" : "h-48"
             )}
           >
@@ -182,12 +182,12 @@ export default function SkinMarketCard({
             />
           </div>
 
-          <div className="mt-3 space-y-2.5">
+          <div className="mt-3 space-y-3">
             <div className="min-w-0 space-y-0.5">
               <div
                 className={join(
-                  "font-black leading-[0.95] tracking-[-0.02em] text-slate-100 break-words",
-                  compact ? "text-[1.75rem]" : "text-[2rem]"
+                  "break-words font-black leading-none text-[color:var(--fg)]",
+                  compact ? "text-[1.45rem]" : "text-[1.8rem]"
                 )}
               >
                 {weaponLabel}
@@ -195,19 +195,22 @@ export default function SkinMarketCard({
               {showSkinSubtitle && (
                 <div
                   className={join(
-                    "font-semibold leading-[0.95] tracking-[-0.01em] text-slate-300/95 break-words",
-                    compact ? "text-[1.25rem]" : "text-[1.4rem]"
+                    "break-words font-semibold leading-tight text-[color:var(--muted-strong)]",
+                    compact ? "text-base" : "text-lg"
                   )}
                 >
                   {skinLabel}
                 </div>
               )}
             </div>
-            <div className="text-right">
+            <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2 text-right">
+              <div className="text-[11px] font-semibold text-[color:var(--muted)]">
+                Aktualni cena
+              </div>
               <div
                 className={join(
-                  "font-extrabold leading-none text-slate-100",
-                  compact ? "text-[1.9rem]" : "text-[2.15rem]"
+                  "font-black leading-none text-[color:var(--fg)]",
+                  compact ? "text-2xl" : "text-3xl"
                 )}
               >
                 {formatCurrency(price)}
@@ -219,24 +222,26 @@ export default function SkinMarketCard({
 
         <div
           className={join(
-            "mt-auto flex items-center justify-between border-t border-slate-800/95 text-slate-400",
+            "mt-auto border-t border-[color:var(--border)] text-[color:var(--muted)]",
             compact ? "px-3.5 pb-3.5 pt-2.5 text-[11px]" : "px-4 pb-4 pt-3 text-xs"
           )}
         >
-          <span className={rarityTextClass[(rarity as Rarity) ?? "Mil-Spec"] ?? "text-slate-300"}>
-            {rarity ?? "Unknown"}
-          </span>
-          <Link
-            href={detailPath}
-            prefetch={false}
-            className={join(
-              "inline-flex items-center justify-center rounded-xl border border-cyan-300/35 bg-cyan-500/10 font-semibold text-cyan-100 transition hover:border-cyan-200/65 hover:bg-cyan-500/20 hover:text-white",
-              compact ? "h-9 min-w-24 px-4 text-sm" : "h-10 min-w-28 px-5 text-sm"
-            )}
-            onClick={(event) => event.stopPropagation()}
-          >
-            Detail
-          </Link>
+          <div className="flex items-center justify-between">
+            <span className={rarityTextClass[(rarity as Rarity) ?? "Mil-Spec"] ?? "text-[color:var(--muted)]"}>
+              {rarity ?? "Unknown"}
+            </span>
+            <Link
+              href={detailPath}
+              prefetch={false}
+              className={join(
+                "inline-flex items-center justify-center rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] font-bold text-[color:var(--fg)] transition hover:border-[color:var(--accent)]",
+                compact ? "h-9 min-w-24 px-4 text-sm" : "h-10 min-w-28 px-5 text-sm"
+              )}
+              onClick={(event) => event.stopPropagation()}
+            >
+              Detail
+            </Link>
+          </div>
         </div>
       </div>
     </article>

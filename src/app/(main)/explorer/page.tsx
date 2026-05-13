@@ -385,29 +385,29 @@ export default function ExplorerPage() {
   };
 
   return (
-    <section className="container-max py-8 space-y-7">
-      <header className="rounded-[2rem] border border-slate-700/45 bg-gradient-to-b from-[#0a1d43] via-[#04112b] to-[#020713] p-4 shadow-[0_28px_70px_rgba(2,8,23,0.6)] sm:p-6">
+    <section className="container-max space-y-7 py-8">
+      <header className="market-stage p-5 sm:p-6">
         <div className="space-y-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="kicker text-cyan-200/80">Skin Explorer</div>
-              <h1 className="display text-3xl text-slate-100">Najdi skin rychleji</h1>
-              <p className="text-sm text-slate-300/85">
+              <div className="kicker">Skin Explorer</div>
+              <h1 className="display text-4xl">Najdi skin rychleji</h1>
+              <p className="mt-2 text-sm text-[color:var(--muted)]">
                 Naseptavani bezi pri psani, vysledky potvrdis Enterem nebo klikem.
               </p>
             </div>
-            <div className="rounded-full border border-emerald-300/25 bg-slate-900/50 px-3 py-1 text-xs text-emerald-100">
+            <div className="badge">
               SkinTrack smart search
             </div>
           </div>
 
           <div ref={searchRef} className="relative">
             <form onSubmit={onSearchSubmit}>
-              <div className="flex items-center gap-3 rounded-full border border-slate-200/20 bg-white/95 px-4 py-2.5 shadow-inner sm:px-5 sm:py-3">
+              <div className="flex items-center gap-3 rounded-2xl border border-[color:var(--border-strong)] bg-[color:var(--card-solid)] px-4 py-2.5 shadow-[var(--shadow-soft)] sm:px-5 sm:py-3">
                 <svg
                   aria-hidden="true"
                   viewBox="0 0 20 20"
-                  className="h-5 w-5 shrink-0 text-slate-500"
+                  className="h-5 w-5 shrink-0 text-[color:var(--muted)]"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -428,12 +428,12 @@ export default function ExplorerPage() {
                   }}
                   onKeyDown={onSearchInputKeyDown}
                   placeholder="Search for your favorite skins"
-                  className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-500"
+                  className="w-full bg-transparent text-base text-[color:var(--fg)] outline-none placeholder:text-[color:var(--muted)]"
                 />
                 <button
                   type="submit"
                   disabled={!canSubmitSearch}
-                  className="rounded-full bg-slate-900 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-100 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="rounded-xl bg-[color:var(--fg)] px-4 py-2 text-xs font-bold uppercase text-[color:var(--bg)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Hledat
                 </button>
@@ -441,33 +441,33 @@ export default function ExplorerPage() {
             </form>
 
             {showSuggestionsPanel && (
-              <div className="absolute left-0 right-0 z-30 mt-3 overflow-hidden rounded-[1.35rem] border border-emerald-300/20 bg-gradient-to-b from-[#041a2f]/95 to-[#030914]/95 shadow-[0_24px_55px_rgba(2,8,23,0.85)] backdrop-blur">
+              <div className="card absolute left-0 right-0 z-30 mt-3 overflow-hidden">
                 {suggestionsLoading && (
-                  <div className="px-5 py-5 text-sm text-slate-300">Nacitam varianty...</div>
+                  <div className="px-5 py-5 text-sm text-[color:var(--muted)]">Nacitam varianty...</div>
                 )}
 
                 {!suggestionsLoading && !!categorySuggestions.length && (
-                  <div className="border-b border-slate-700/55 bg-slate-950/20">
-                    <div className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-200/70">
+                  <div className="border-b border-[color:var(--border)] bg-[color:var(--surface-soft)]">
+                    <div className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase text-[color:var(--muted)]">
                       Kategorie
                     </div>
-                    <ul className="divide-y divide-slate-700/40">
+                    <ul className="divide-y divide-[color:var(--border)]">
                       {categorySuggestions.map((category) => (
                         <li key={category.key}>
                           <button
                             type="button"
                             onClick={() => onSuggestionCategoryPick(category)}
-                            className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-white/5"
+                            className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-[color:var(--card-solid)]"
                           >
                             <div className="min-w-0">
-                              <div className="truncate text-sm font-semibold text-slate-100">
+                              <div className="truncate text-sm font-semibold text-[color:var(--fg)]">
                                 {category.label}
                               </div>
-                              <div className="truncate text-xs text-slate-400">
+                              <div className="truncate text-xs text-[color:var(--muted)]">
                                 Zobrazit vsechny skiny v kategorii
                               </div>
                             </div>
-                            <span className="rounded-lg border border-cyan-300/35 bg-cyan-500/15 px-2 py-1 text-[11px] font-semibold text-cyan-100">
+                            <span className="rounded-lg border border-[color:var(--border)] bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold text-[color:var(--accent)]">
                               Kategorie
                             </span>
                           </button>
@@ -478,27 +478,27 @@ export default function ExplorerPage() {
                 )}
 
                 {!suggestionsLoading && !!weaponSuggestions.length && (
-                  <div className="border-b border-slate-700/55 bg-slate-950/20">
-                    <div className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-200/75">
+                  <div className="border-b border-[color:var(--border)] bg-[color:var(--surface-soft)]">
+                    <div className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase text-[color:var(--muted)]">
                       Zbrane
                     </div>
-                    <ul className="divide-y divide-slate-700/40">
+                    <ul className="divide-y divide-[color:var(--border)]">
                       {weaponSuggestions.map((weapon) => (
                         <li key={weapon.key}>
                           <button
                             type="button"
                             onClick={() => onSuggestionWeaponPick(weapon)}
-                            className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-white/5"
+                            className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-[color:var(--card-solid)]"
                           >
                             <div className="min-w-0">
-                              <div className="truncate text-sm font-semibold text-slate-100">
+                              <div className="truncate text-sm font-semibold text-[color:var(--fg)]">
                                 {weapon.label}
                               </div>
-                              <div className="truncate text-xs text-slate-400">
+                              <div className="truncate text-xs text-[color:var(--muted)]">
                                 Zobrazit vsechny skiny pro tuhle zbran
                               </div>
                             </div>
-                            <span className="rounded-lg border border-emerald-300/35 bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-100">
+                            <span className="rounded-lg border border-[color:var(--border)] bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-500">
                               Zbran
                             </span>
                           </button>
@@ -509,26 +509,26 @@ export default function ExplorerPage() {
                 )}
 
                 {!suggestionsLoading && !hasAnySuggestion && (
-                  <div className="px-5 py-5 text-sm text-slate-400">
+                  <div className="px-5 py-5 text-sm text-[color:var(--muted)]">
                     Pro tenhle dotaz jsme nic nenasli.
                   </div>
                 )}
 
                 {!suggestionsLoading && !!suggestionGroups.length && (
-                  <ul className="max-h-[30rem] overflow-y-auto divide-y divide-slate-700/55">
+                  <ul className="max-h-[30rem] overflow-y-auto divide-y divide-[color:var(--border)]">
                     {suggestionGroups.map((group) => {
                       const subtitle = group.hasStatTrak
                         ? `${group.variants.length} variant (normal + ST)`
                         : `${group.variants.length} variant`;
 
                       return (
-                        <li key={group.key} className="bg-slate-950/10">
+                        <li key={group.key}>
                           <button
                             type="button"
                             onClick={() => onSuggestionGroupPick(group)}
-                            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/5"
+                            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[color:var(--surface-soft)]"
                           >
-                            <div className="h-11 w-16 overflow-hidden rounded-lg border border-emerald-300/25 bg-slate-900/80 p-1">
+                            <div className="market-stage h-11 w-16 overflow-hidden p-1">
                               <img
                                 src={getSkinImageUrl(group.imageName)}
                                 alt={`${group.weapon} | ${group.skin}`}
@@ -537,16 +537,16 @@ export default function ExplorerPage() {
                               />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-base font-semibold text-slate-100">
+                              <div className="truncate text-base font-semibold text-[color:var(--fg)]">
                                 {group.weapon}
-                                <span className="px-2 text-slate-500">|</span>
+                                <span className="px-2 text-[color:var(--muted)]">|</span>
                                 {group.skin}
                               </div>
-                              <div className="truncate text-xs text-slate-400">
+                              <div className="truncate text-xs text-[color:var(--muted)]">
                                 {subtitle}
                               </div>
                             </div>
-                            <span className="rounded-lg border border-slate-600/70 bg-slate-900/70 px-2 py-1 text-[11px] font-semibold uppercase text-slate-200">
+                            <span className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-2 py-1 text-[11px] font-semibold uppercase text-[color:var(--muted)]">
                               All
                             </span>
                           </button>
@@ -555,13 +555,13 @@ export default function ExplorerPage() {
                     })}
 
                     {paintSuggestion && (
-                      <li key={`paint-${paintSuggestion.skin}`} className="bg-slate-950/10">
+                      <li key={`paint-${paintSuggestion.skin}`}>
                         <button
                           type="button"
                           onClick={() => onSuggestionPaintPick(paintSuggestion.skin)}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/5"
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[color:var(--surface-soft)]"
                         >
-                          <div className="h-11 w-16 overflow-hidden rounded-lg border border-emerald-300/25 bg-slate-900/80 p-1">
+                          <div className="market-stage h-11 w-16 overflow-hidden p-1">
                             <img
                               src={getSkinImageUrl(paintSuggestion.imageName)}
                               alt={paintSuggestion.skin}
@@ -570,14 +570,14 @@ export default function ExplorerPage() {
                             />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-base font-semibold text-slate-100">
+                            <div className="truncate text-base font-semibold text-[color:var(--fg)]">
                               {paintSuggestion.skin}
                             </div>
-                            <div className="truncate text-xs text-slate-400">
+                            <div className="truncate text-xs text-[color:var(--muted)]">
                               {paintSuggestion.weaponCount} zbrani - {paintSuggestion.variantsCount} variant
                             </div>
                           </div>
-                          <span className="rounded-lg border border-cyan-300/35 bg-cyan-500/15 px-2 py-1 text-[11px] font-semibold text-cyan-100">
+                          <span className="rounded-lg border border-[color:var(--border)] bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold text-[color:var(--accent)]">
                             Paint
                           </span>
                         </button>
@@ -591,26 +591,26 @@ export default function ExplorerPage() {
         </div>
       </header>
 
-      <div className="grid gap-3 md:grid-cols-[1.2fr_1fr]">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="surface grid gap-4 p-4 md:grid-cols-[1.2fr_1fr]">
+        <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-300/80">Cena od (EUR)</label>
+            <label className="text-xs font-semibold text-[color:var(--muted)]">Cena od (EUR)</label>
             <input
               value={minPrice}
               onChange={(event) => setMinPrice(event.target.value)}
               placeholder="0"
-              className="rounded-xl border border-slate-600/60 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-300/40"
+              className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] px-3 py-2 text-sm text-[color:var(--fg)] outline-none transition focus:border-[color:var(--accent)]"
               type="number"
               min="0"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-300/80">Cena do (EUR)</label>
+            <label className="text-xs font-semibold text-[color:var(--muted)]">Cena do (EUR)</label>
             <input
               value={maxPrice}
               onChange={(event) => setMaxPrice(event.target.value)}
               placeholder="500"
-              className="rounded-xl border border-slate-600/60 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-300/40"
+              className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] px-3 py-2 text-sm text-[color:var(--fg)] outline-none transition focus:border-[color:var(--accent)]"
               type="number"
               min="0"
             />
@@ -620,17 +620,17 @@ export default function ExplorerPage() {
         <div className="grid gap-2">
           <div className="grid gap-2 sm:grid-cols-2">
             <div ref={sortRef} className="relative">
-              <label className="mb-1 block text-xs text-slate-300/80">Sort</label>
+              <label className="mb-1 block text-xs font-semibold text-[color:var(--muted)]">Sort</label>
               <button
                 type="button"
                 onClick={() => setSortOpen((value) => !value)}
-                className="flex w-full items-center justify-between rounded-xl border border-slate-600/60 bg-slate-950/40 px-3 py-2 text-left text-sm text-slate-100"
+                className="flex w-full items-center justify-between rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] px-3 py-2 text-left text-sm text-[color:var(--fg)]"
               >
                 <span>{sortOptions.find((option) => option.value === sort)?.label}</span>
-                <span className="text-xs text-slate-400">v</span>
+                <span className="text-xs text-[color:var(--muted)]">v</span>
               </button>
               {sortOpen && (
-                <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-lg border border-slate-600/80 bg-slate-950 shadow-2xl">
+                <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] shadow-2xl">
                   {sortOptions.map((option) => {
                     const active = option.value === sort;
                     return (
@@ -643,8 +643,8 @@ export default function ExplorerPage() {
                         }}
                         className={`w-full px-3 py-2 text-left text-sm transition ${
                           active
-                            ? "bg-slate-800/90 text-slate-100"
-                            : "text-slate-300 hover:bg-slate-800/55"
+                            ? "bg-[color:var(--surface-soft)] text-[color:var(--fg)]"
+                            : "text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)]"
                         }`}
                       >
                         {option.label}
@@ -656,14 +656,14 @@ export default function ExplorerPage() {
             </div>
 
             <div ref={rarityRef} className="relative">
-              <label className="mb-1 block text-xs text-slate-300/80">Rarity</label>
+              <label className="mb-1 block text-xs font-semibold text-[color:var(--muted)]">Rarity</label>
               <button
                 type="button"
                 onClick={() => setRarityOpen((value) => !value)}
                 className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm ${
                   rarity !== "all"
-                    ? "border-cyan-300/45 bg-slate-950/50 text-slate-100"
-                    : "border-slate-600/60 bg-slate-950/40 text-slate-100"
+                    ? "border-[color:var(--accent)] bg-[color:var(--card-solid)] text-[color:var(--fg)]"
+                    : "border-[color:var(--border)] bg-[color:var(--card-solid)] text-[color:var(--fg)]"
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -676,11 +676,11 @@ export default function ExplorerPage() {
                     />
                   )}
                 </span>
-                <span className="text-xs text-slate-400">v</span>
+                <span className="text-xs text-[color:var(--muted)]">v</span>
               </button>
 
               {rarityOpen && (
-                <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-lg border border-slate-600/80 bg-slate-950 shadow-2xl">
+                <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] shadow-2xl">
                   {rarityOptions.map((option) => {
                     const active = option.value === rarity;
                     return (
@@ -693,8 +693,8 @@ export default function ExplorerPage() {
                         }}
                         className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${
                           active
-                            ? "bg-slate-800/90 text-slate-100"
-                            : "text-slate-300 hover:bg-slate-800/55"
+                            ? "bg-[color:var(--surface-soft)] text-[color:var(--fg)]"
+                            : "text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)]"
                         }`}
                       >
                         <span>{option.label}</span>
@@ -716,11 +716,11 @@ export default function ExplorerPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
+      <div className="flex flex-col justify-between gap-3 text-sm text-[color:var(--muted)] lg:flex-row lg:items-center">
         <span>{badgeText}</span>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {selectedCategory && selectedCategoryLabel && (
-            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/35 bg-cyan-500/15 px-3 py-1 text-xs text-cyan-100">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-cyan-500/10 px-3 py-1 text-xs text-[color:var(--accent)]">
               Kategorie: {selectedCategoryLabel}
               <button
                 type="button"
@@ -730,14 +730,14 @@ export default function ExplorerPage() {
                     runSearch(qInput, { category: null });
                   }
                 }}
-                className="rounded-full border border-cyan-200/45 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition hover:bg-cyan-400/20"
+                className="rounded-full border border-[color:var(--border)] px-1.5 py-0.5 text-[10px] font-semibold uppercase transition hover:bg-cyan-400/20"
               >
                 Zrusit
               </button>
             </span>
           )}
           {selectedWeapon && selectedWeaponLabel && (
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/35 bg-emerald-500/15 px-3 py-1 text-xs text-emerald-100">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-emerald-500/10 px-3 py-1 text-xs text-emerald-500">
               Zbran: {selectedWeaponLabel}
               <button
                 type="button"
@@ -747,18 +747,18 @@ export default function ExplorerPage() {
                     runSearch(qInput, { weapon: null });
                   }
                 }}
-                className="rounded-full border border-emerald-200/45 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition hover:bg-emerald-400/20"
+                className="rounded-full border border-[color:var(--border)] px-1.5 py-0.5 text-[10px] font-semibold uppercase transition hover:bg-emerald-400/20"
               >
                 Zrusit
               </button>
             </span>
           )}
           {pendingInput && (
-            <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-3 py-1 text-xs text-amber-100">
+            <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-3 py-1 text-xs text-amber-500">
               Nepotvrzene zmeny ve vyhledavani
             </span>
           )}
-          {loading && <span className="text-slate-200">Loading...</span>}
+          {loading && <span className="text-[color:var(--fg)]">Loading...</span>}
         </div>
       </div>
 
@@ -769,13 +769,13 @@ export default function ExplorerPage() {
       )}
 
       {!hasSearched && (
-        <div className="rounded-2xl border border-dashed border-slate-600/60 bg-slate-900/35 px-6 py-10 text-center text-slate-300">
+        <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 py-10 text-center text-[color:var(--muted)]">
           Pis do vyhledavani nahore, vyber suggestion a potvrd hledani.
         </div>
       )}
 
       {hasSearched && !loading && !items.length && !error && (
-        <div className="rounded-2xl border border-dashed border-slate-600/60 bg-slate-900/35 px-6 py-10 text-center text-slate-300">
+        <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 py-10 text-center text-[color:var(--muted)]">
           Nic jsme nenasli. Zkus zmenit filtr nebo jinou kombinaci.
         </div>
       )}

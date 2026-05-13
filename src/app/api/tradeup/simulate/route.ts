@@ -5,8 +5,10 @@ import {
   SkinMeta,
 } from "@/app/lib/skin-meta";
 import {
+  getSkinportHistory,
   getSkinportItems,
   parseMarketHashName,
+  SkinportHistoryItem,
   SkinportItem,
 } from "@/app/lib/skinport";
 import { isWeaponInSkinCategory } from "@/app/lib/skin-categories";
@@ -76,6 +78,19 @@ const getNormalizedInputFloat = (value: number, meta: SkinMeta) => {
 const priceFromItem = (item?: SkinportItem | null) => {
   if (!item) return null;
   return item.min_price ?? item.median_price ?? item.suggested_price ?? null;
+};
+
+const priceFromHistory = (item?: SkinportHistoryItem | null) => {
+  if (!item) return null;
+  return (
+    item.last_7_days?.median ??
+    item.last_7_days?.avg ??
+    item.last_30_days?.median ??
+    item.last_30_days?.avg ??
+    item.last_90_days?.median ??
+    item.last_90_days?.avg ??
+    null
+  );
 };
 
 const buildLookupKey = (marketHashName: string) => {
@@ -356,12 +371,24 @@ export async function POST(req: NextRequest) {
       }
     >();
 
-    const skinportItems = await getSkinportItems();
+    const [skinportItems, skinportHistory] = await Promise.all([
+      getSkinportItems(),
+      getSkinportHistory().catch(() => []),
+    ]);
     const skinportByLookup = new Map<string, SkinportItem>();
+    const historyByLower = new Map<string, SkinportHistoryItem>();
+    const historyByLookup = new Map<string, SkinportHistoryItem>();
     for (const item of Object.values(skinportItems)) {
       const key = buildLookupKey(item.market_hash_name);
       if (!skinportByLookup.has(key)) {
         skinportByLookup.set(key, item);
+      }
+    }
+    for (const item of skinportHistory) {
+      historyByLower.set(item.market_hash_name.toLowerCase(), item);
+      const key = buildLookupKey(item.market_hash_name);
+      if (!historyByLookup.has(key)) {
+        historyByLookup.set(key, item);
       }
     }
 
@@ -469,6 +496,8 @@ export async function POST(req: NextRequest) {
       const lookupKey = buildLookupKey(marketHashName);
       const exactSkinport = skinportItems[normalized] ?? skinportItems[marketHashName];
       const normalizedSkinport = skinportByLookup.get(lookupKey) ?? null;
+      const exactHistory = historyByLower.get(normalized) ?? null;
+      const normalizedHistory = historyByLookup.get(lookupKey) ?? null;
 
       const skinportPrice = priceFromItem(exactSkinport ?? normalizedSkinport);
       if (skinportPrice !== null) {
@@ -476,6 +505,19 @@ export async function POST(req: NextRequest) {
           price: skinportPrice,
           currency:
             exactSkinport?.currency ?? normalizedSkinport?.currency ?? "EUR",
+        };
+      }
+
+      const historyPrice = priceFromHistory(exactHistory ?? normalizedHistory);
+      if (historyPrice !== null) {
+        return {
+          price: historyPrice,
+          currency:
+            exactHistory?.currency ??
+            normalizedHistory?.currency ??
+            exactSkinport?.currency ??
+            normalizedSkinport?.currency ??
+            "EUR",
         };
       }
 

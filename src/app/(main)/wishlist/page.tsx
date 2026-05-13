@@ -199,24 +199,27 @@ export default function WishlistPage() {
   }
 
   return (
-    <section className="container-max py-8 space-y-7">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="container-max space-y-7 py-8">
+      <div className="market-stage p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="kicker">Wishlist</div>
-          <h1 className="display text-3xl">Sledovane skiny</h1>
+          <h1 className="display text-4xl">Sledovane skiny</h1>
           <p className="mt-2 text-sm text-[color:var(--muted)]">
             Cenove alerty muzes zapnout nebo vypnout u kazdeho skinu. E-mail odchazi pri prudke zmene od {thresholdPercent} %.
           </p>
         </div>
-        <div className="rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-4 py-2 text-sm text-[color:var(--muted)]">
+        <div className="stat-tile min-w-32 text-center text-sm text-[color:var(--muted)]">
+          <div className="text-3xl font-black text-[color:var(--fg)]">{items.length}</div>
           {items.length} skinu
+        </div>
         </div>
       </div>
 
-      <div className="card p-5">
+      <div className="surface p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--muted)]">
+            <div className="text-xs font-semibold uppercase text-[color:var(--muted)]">
               E-mail ze Steam uctu
             </div>
             <div className="mt-2 text-sm font-semibold text-[color:var(--fg)]">

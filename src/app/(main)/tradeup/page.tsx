@@ -84,6 +84,14 @@ type ComputedOutcome = SimOutput & {
   isWorst: boolean;
 };
 
+type PriceLookupEntry = {
+  price: number | null;
+};
+
+type PriceLookupResponse = {
+  prices?: Record<string, PriceLookupEntry>;
+};
+
 const rarityOptions: Array<{ value: RarityFilter; label: string }> = [
   { value: "all", label: "Vsechny kvality" },
   { value: "Consumer", label: "Consumer" },
@@ -137,25 +145,25 @@ const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
 const profitTextClass = (value: number | null | undefined) => {
-  if (typeof value !== "number") return "text-slate-400";
+  if (typeof value !== "number") return "text-[color:var(--muted)]";
   return value >= 0 ? "text-emerald-300" : "text-rose-300";
 };
 
 const profitabilityTextClass = (value: number | null | undefined) => {
-  if (typeof value !== "number") return "text-slate-400";
+  if (typeof value !== "number") return "text-[color:var(--muted)]";
   return value >= 100 ? "text-emerald-300" : "text-rose-300";
 };
 
 const fieldClass =
-  "h-16 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-300/60 focus:bg-white/14 disabled:cursor-not-allowed disabled:opacity-60";
+  "h-14 rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] px-3 py-2 text-sm text-[color:var(--fg)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-60";
 
 const selectClass = `${fieldClass} tradeup-select`;
 
 const skinCardClass =
-  "overflow-hidden rounded-[1.35rem] border border-cyan-300/10 bg-[linear-gradient(180deg,rgba(66,91,103,0.74)_0%,rgba(11,22,36,0.96)_56%,rgba(0,0,0,0.98)_100%)] p-3 text-white shadow-[0_18px_34px_rgba(0,0,0,0.34)] transition hover:-translate-y-0.5 hover:border-cyan-300/30";
+  "overflow-hidden rounded-2xl border border-[color:var(--border)] bg-[color:var(--card-solid)] p-3 text-[color:var(--fg)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:border-[color:var(--accent)]";
 
 const miniPanelClass =
-  "rounded-lg border border-white/10 bg-black/18 px-3 py-2";
+  "rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2";
 
 const parsePriceInput = (value: string) => {
   const normalized = value.trim().replace(",", ".");
@@ -171,6 +179,15 @@ const hasInvalidPriceInput = (value: string) =>
 const getEffectivePrice = (marketPrice: number | null, customPrice: string) => {
   const manualPrice = parsePriceInput(customPrice);
   return manualPrice ?? marketPrice;
+};
+
+const readLookupPrice = (
+  prices: Record<string, PriceLookupEntry> | undefined,
+  name: string
+) => {
+  const entry = prices?.[name] ?? prices?.[name.toLowerCase()];
+  const price = entry?.price;
+  return typeof price === "number" && Number.isFinite(price) ? price : null;
 };
 
 const getItemVariant = (name: string): ItemVariant => {
@@ -930,6 +947,53 @@ export default function TradeupPage() {
     () => inputs.map((item) => ({ name: item.name, float: item.float })),
     [inputs]
   );
+  const missingInputPriceNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          inputs
+            .filter((item) => item.marketPrice === null)
+            .map((item) => item.name)
+        )
+      ),
+    [inputs]
+  );
+
+  useEffect(() => {
+    if (!missingInputPriceNames.length) return;
+
+    const controller = new AbortController();
+    fetch("/api/skins/prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ names: missingInputPriceNames }),
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Input price lookup failed");
+        return (await res.json()) as PriceLookupResponse;
+      })
+      .then((body) => {
+        setInputs((current) => {
+          let changed = false;
+          const next = current.map((item) => {
+            if (item.marketPrice !== null) return item;
+            const price = readLookupPrice(body.prices, item.name);
+            if (price === null) return item;
+            changed = true;
+            return { ...item, marketPrice: price };
+          });
+          return changed ? next : current;
+        });
+      })
+      .catch((error) => {
+        if ((error as { name?: string })?.name !== "AbortError") {
+          console.error("Input price lookup failed", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, [missingInputPriceNames]);
 
   useEffect(() => {
     const hasInvalidKnifeItem =
@@ -1019,6 +1083,57 @@ export default function TradeupPage() {
     requiredItems,
     simulateItems,
   ]);
+
+  const missingOutcomePriceNames = useMemo(
+    () =>
+      simResult
+        ? Array.from(
+            new Set(
+              simResult.outputs
+                .filter((output) => output.price === null)
+                .map((output) => output.marketHashName)
+            )
+          )
+        : [],
+    [simResult]
+  );
+
+  useEffect(() => {
+    if (!missingOutcomePriceNames.length) return;
+
+    const controller = new AbortController();
+    fetch("/api/skins/prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ names: missingOutcomePriceNames }),
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Outcome price lookup failed");
+        return (await res.json()) as PriceLookupResponse;
+      })
+      .then((body) => {
+        setSimResult((current) => {
+          if (!current) return current;
+          let changed = false;
+          const outputs = current.outputs.map((output) => {
+            if (output.price !== null) return output;
+            const price = readLookupPrice(body.prices, output.marketHashName);
+            if (price === null) return output;
+            changed = true;
+            return { ...output, price };
+          });
+          return changed ? { ...current, outputs } : current;
+        });
+      })
+      .catch((error) => {
+        if ((error as { name?: string })?.name !== "AbortError") {
+          console.error("Outcome price lookup failed", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, [missingOutcomePriceNames]);
 
   const outcomes = useMemo<ComputedOutcome[]>(() => {
     if (!simResult) return [];
@@ -1133,36 +1248,34 @@ export default function TradeupPage() {
   };
 
   return (
-    <section className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[#061841] py-8 text-white">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(115deg,rgba(8,23,64,0.98)_0%,rgba(9,23,72,0.94)_45%,rgba(0,92,129,0.52)_100%)]" />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:240px_240px] opacity-55" />
-      <div className="mx-auto w-full max-w-[118rem] px-4 sm:px-6 lg:px-8">
-        <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <section className="container-max py-8">
+      <div className="space-y-6">
+        <header className="market-stage flex flex-col gap-4 p-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">
+            <div className="kicker">
               Trade-up
             </div>
-            <h1 className="mt-2 text-4xl font-black tracking-normal text-white">
+            <h1 className="display mt-2 text-4xl">
               CS2 Tradeup Calculator
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
-            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em]">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-[color:var(--muted)]">
+            <span className="badge">
               Contract {inputs.length}/{requiredItems}
             </span>
-            <span className={`rounded-full border bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] ${getVariantBadgeClass(contractVariant)}`}>
+            <span className={`rounded-full border bg-[color:var(--surface-soft)] px-3 py-1.5 text-xs font-bold uppercase ${getVariantBadgeClass(contractVariant)}`}>
             {variantLabel[contractVariant]}
             </span>
-            <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-cyan-200">
+            <span className="rounded-full border border-[color:var(--border)] bg-cyan-300/10 px-3 py-1.5 text-xs font-bold uppercase text-[color:var(--accent)]">
               {knifeMode ? "Gold mode" : "Standard mode"}
             </span>
             {inputPricing.manualCount > 0 && (
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em]">
+              <span className="badge">
                 Manual prices {inputPricing.manualCount}
               </span>
             )}
             {simLoading && (
-              <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-cyan-200">
+              <span className="rounded-full border border-[color:var(--border)] bg-cyan-300/10 px-3 py-1.5 text-xs font-bold uppercase text-[color:var(--accent)]">
                 Pocitam...
               </span>
             )}
@@ -1172,24 +1285,24 @@ export default function TradeupPage() {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,0.98fr)_1px_minmax(0,1.02fr)]">
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-4xl font-black tracking-normal text-white">Select skins</h2>
+              <h2 className="display text-3xl">Select skins</h2>
               <button
                 onClick={clearFilters}
-                className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10"
+                className="btn-ghost text-sm"
               >
                 Reset
               </button>
             </div>
 
             <div className="space-y-4">
-              <div className="grid gap-2 rounded-lg border border-white/10 bg-white/8 p-1 text-sm sm:grid-cols-2">
+              <div className="grid gap-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-1 text-sm sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setTradeupMode(false)}
                 className={`rounded-lg px-3 py-2 font-semibold transition ${
                   !knifeMode
-                    ? "bg-cyan-300 text-slate-950"
-                    : "text-slate-300 hover:bg-white/10"
+                    ? "bg-[color:var(--fg)] text-[color:var(--bg)]"
+                    : "text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
                 }`}
               >
                 Standard 10x
@@ -1199,8 +1312,8 @@ export default function TradeupPage() {
                 onClick={() => setTradeupMode(true)}
                 className={`rounded-lg px-3 py-2 font-semibold transition ${
                   knifeMode
-                    ? "bg-cyan-300 text-slate-950"
-                    : "text-slate-300 hover:bg-white/10"
+                    ? "bg-[color:var(--fg)] text-[color:var(--bg)]"
+                    : "text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
                 }`}
               >
                 Covert 5x to Gold
@@ -1288,25 +1401,25 @@ export default function TradeupPage() {
               </select>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-200">
-              <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/8 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-[color:var(--fg)]">
+              <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2">
                 <input
                   type="checkbox"
                   checked={stattrakOnly}
                   onChange={(e) => setStattrakOnly(e.target.checked)}
                   className="h-4 w-4"
-                  style={{ accentColor: "#22d3ee" }}
+                  style={{ accentColor: "var(--accent)" }}
                 />
                 StatTrak
               </label>
 
-              <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/8 px-3 py-2">
+              <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2">
                 <input
                   type="checkbox"
                   checked={myInventoryOnly}
                   onChange={(e) => setMyInventoryOnly(e.target.checked)}
                   className="h-4 w-4"
-                  style={{ accentColor: "#22d3ee" }}
+                  style={{ accentColor: "var(--accent)" }}
                 />
                 Jen muj inventar
               </label>
@@ -1322,20 +1435,20 @@ export default function TradeupPage() {
 
               <button
                 onClick={autoFill}
-                className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:bg-cyan-300/18"
+                className="rounded-lg border border-[color:var(--border)] bg-cyan-300/10 px-3 py-2 text-xs font-bold text-[color:var(--accent)] transition hover:bg-cyan-300/18"
               >
                 Auto-fill do {requiredItems}
               </button>
               <button
                 onClick={clearFilters}
-                className="rounded-lg border border-white/10 bg-white/8 px-3 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/12"
+                className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs font-bold text-[color:var(--muted)] transition hover:bg-[color:var(--card-solid)]"
               >
                 Reset filtru
               </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-sm font-semibold text-slate-300">
+          <div className="flex items-center justify-between text-sm font-semibold text-[color:var(--muted)]">
             <span>
               {showPlaceholder
                 ? "Zadej aspon 2 znaky nebo aktivuj filtr"
@@ -1357,13 +1470,13 @@ export default function TradeupPage() {
           )}
 
           {showPlaceholder && (
-            <div className="rounded-lg border border-dashed border-white/15 bg-white/8 px-6 py-10 text-center text-slate-300">
+            <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 py-10 text-center text-[color:var(--muted)]">
               Skins se zobrazi az po zadani filtru.
             </div>
           )}
 
           {!showPlaceholder && !loading && !sortedResults.length && !error && (
-            <div className="rounded-lg border border-dashed border-white/15 bg-white/8 px-6 py-10 text-center text-slate-300">
+            <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 py-10 text-center text-[color:var(--muted)]">
               Nic jsme nenasli. Zkus jinou kombinaci filtru.
             </div>
           )}
@@ -1414,8 +1527,8 @@ export default function TradeupPage() {
                   key={item.name}
                   className={skinCardClass}
                 >
-                  <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-200">
-                    <span className="rounded-full bg-white/12 px-2 py-1 font-black">
+                  <div className="mb-2 flex items-center justify-between gap-2 text-xs text-[color:var(--muted)]">
+                    <span className="rounded-full bg-[color:var(--surface-soft)] px-2 py-1 font-black text-[color:var(--fg)]">
                       {formatCurrency(item.price)}
                     </span>
                     <div className="flex flex-wrap justify-end gap-1">
@@ -1432,7 +1545,7 @@ export default function TradeupPage() {
                     </div>
                   </div>
 
-                  <div className="mb-3 flex h-28 items-center justify-center rounded-lg bg-black/10 p-2">
+                  <div className="market-stage mb-3 flex h-28 items-center justify-center p-2">
                     <img
                       src={item.imageUrl ?? getSkinImageUrl(item.name)}
                       alt={item.name}
@@ -1442,11 +1555,11 @@ export default function TradeupPage() {
                   </div>
 
                   <div className="line-clamp-1 text-base font-semibold">{parsed.weapon}</div>
-                  <div className="line-clamp-1 text-sm font-semibold text-slate-300">
+                  <div className="line-clamp-1 text-sm font-semibold text-[color:var(--muted)]">
                     {parsed.skin}
                   </div>
 
-                  <div className="mt-2 space-y-1 text-[11px] font-semibold text-slate-400">
+                  <div className="mt-2 space-y-1 text-[11px] font-semibold text-[color:var(--muted)]">
                     <div>
                       {poolLabel}: {itemPool}
                     </div>
@@ -1459,14 +1572,14 @@ export default function TradeupPage() {
                     <button
                       onClick={() => addInput(item)}
                       disabled={addDisabled}
-                      className="flex flex-1 items-center justify-center rounded-lg bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-slate-400"
+                      className="flex flex-1 items-center justify-center rounded-lg bg-[color:var(--fg)] px-3 py-2 text-xs font-black text-[color:var(--bg)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-[color:var(--surface-strong)] disabled:text-[color:var(--muted)]"
                     >
                       {addLabel}
                     </button>
                     <Link
                       href={getSkinDetailPath(item.name)}
                       prefetch={false}
-                      className="rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-cyan-300/40"
+                      className="rounded-lg border border-[color:var(--border)] px-3 py-2 text-xs font-bold text-[color:var(--muted)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--fg)]"
                     >
                       Detail
                     </Link>
@@ -1477,37 +1590,37 @@ export default function TradeupPage() {
           </div>
           </div>
 
-          <div className="hidden bg-cyan-200/25 xl:block" />
+          <div className="hidden bg-[color:var(--border)] xl:block" />
 
-          <div className="space-y-5 xl:sticky xl:top-24 xl:self-start">
-            <div className="rounded-[1.35rem] border border-white/10 bg-white/8 p-5 shadow-[0_22px_54px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+          <div className="space-y-5 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:self-start xl:overflow-y-auto xl:pr-2">
+            <div className="card p-5">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">
+                <div className="kicker">
                   Contract
                 </div>
-                <h2 className="mt-1 text-3xl font-black tracking-normal text-white">
+                <h2 className="display mt-1 text-3xl">
                   Tradeup
                 </h2>
               </div>
               <button
                 onClick={clearContract}
-                className="rounded-lg border border-white/10 bg-white/8 px-3 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/12"
+                className="btn-ghost text-xs"
               >
                 Vycistit
               </button>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-              <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-3">
+              <div className="mb-2 flex items-center justify-between text-xs font-bold text-[color:var(--muted)]">
                 <span>
                   {inputs.length}/{requiredItems} inputu
                 </span>
                 <span>{completionPercent}%</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-2 overflow-hidden rounded-full bg-[color:var(--surface-strong)]">
                 <div
-                  className="h-full rounded-full bg-cyan-300 transition-all"
+                  className="h-full rounded-full bg-[color:var(--accent)] transition-all"
                   style={{ width: `${completionPercent}%` }}
                 />
               </div>
@@ -1530,7 +1643,7 @@ export default function TradeupPage() {
                   return (
                     <div
                       key={`slot-${index}`}
-                      className="rounded-lg border border-dashed border-white/15 bg-black/16 px-3 py-6 text-center text-xs font-bold text-slate-400"
+                      className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-6 text-center text-xs font-bold text-[color:var(--muted)]"
                     >
                       Slot {index + 1}
                     </div>
@@ -1550,7 +1663,7 @@ export default function TradeupPage() {
                 return (
                   <article
                     key={`${item.name}-${index}`}
-                    className="space-y-3 rounded-[1.1rem] border border-cyan-300/10 bg-[linear-gradient(180deg,rgba(66,91,103,0.55)_0%,rgba(9,18,31,0.96)_64%,rgba(0,0,0,0.98)_100%)] p-3"
+                    className="space-y-3 rounded-2xl border border-[color:var(--border)] bg-[color:var(--card-solid)] p-3"
                   >
                     <div className="flex items-center justify-between gap-3 text-xs">
                       <div className="flex flex-wrap gap-1">
@@ -1573,7 +1686,7 @@ export default function TradeupPage() {
                       </button>
                     </div>
 
-                    <div className="flex h-20 items-center justify-center rounded-lg bg-black/12 p-2">
+                    <div className="market-stage flex h-20 items-center justify-center p-2">
                       <img
                         src={item.imageUrl ?? getSkinImageUrl(item.name)}
                         alt={item.name}
@@ -1583,23 +1696,23 @@ export default function TradeupPage() {
                     </div>
 
                     <div className="line-clamp-1 text-sm font-semibold">{item.weapon}</div>
-                    <div className="line-clamp-1 text-xs font-semibold text-slate-300">
+                    <div className="line-clamp-1 text-xs font-semibold text-[color:var(--muted)]">
                       {item.skin}
                     </div>
-                    <div className="text-[11px] font-semibold text-slate-400">
+                    <div className="text-[11px] font-semibold text-[color:var(--muted)]">
                       {poolLabel}:{" "}
                       {getPreferredTradeupPool(item, knifeMode) ?? "Unknown"}
                     </div>
 
                     <div className="grid gap-2 sm:grid-cols-2">
                       <div className={miniPanelClass}>
-                        <div className="text-[11px] font-bold uppercase text-slate-400">Market price</div>
+                        <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Market price</div>
                         <div className="text-sm font-semibold">
                           {formatCurrency(item.marketPrice)}
                         </div>
                       </div>
                       <label className={miniPanelClass}>
-                        <div className="text-[11px] font-bold uppercase text-slate-400">Moje cena</div>
+                        <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Moje cena</div>
                         <input
                           value={item.customPrice}
                           onChange={(e) => updateInputPrice(index, e.target.value)}
@@ -1607,15 +1720,15 @@ export default function TradeupPage() {
                           placeholder="napr. 1.35"
                           className={`mt-1 w-full rounded-md border px-2 py-1 text-sm outline-none ${
                             invalidPrice
-                              ? "border-rose-500/60 bg-rose-500/10 text-rose-100"
-                              : "border-white/10 bg-black/20 text-white"
+                            ? "border-rose-500/60 bg-rose-500/10 text-rose-500"
+                              : "border-[color:var(--border)] bg-[color:var(--card-solid)] text-[color:var(--fg)]"
                           }`}
                         />
                       </label>
                     </div>
 
                     <div className={miniPanelClass}>
-                      <div className="flex items-center justify-between text-[11px] font-bold uppercase text-slate-400">
+                      <div className="flex items-center justify-between text-[11px] font-bold uppercase text-[color:var(--muted)]">
                         <span>Float</span>
                         <span>{formatFloat(item.float, 4)}</span>
                       </div>
@@ -1630,9 +1743,9 @@ export default function TradeupPage() {
                       />
                     </div>
 
-                    <div className="text-[11px] font-semibold text-slate-400">
+                    <div className="text-[11px] font-semibold text-[color:var(--muted)]">
                       Pouzita cena:{" "}
-                      <span className="font-semibold text-white">
+                      <span className="font-semibold text-[color:var(--fg)]">
                         {formatCurrency(effectivePrice)}
                       </span>
                     </div>
@@ -1643,23 +1756,23 @@ export default function TradeupPage() {
 
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Average float</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Average float</div>
                 <div className="text-sm font-semibold">{formatFloat(avgFloat, 5)}</div>
               </div>
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Adjusted float</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Adjusted float</div>
                 <div className="text-sm font-semibold">
                   {formatFloat(simResult?.avgNormalizedFloat ?? avgAdjustedFloat, 5)}
                 </div>
               </div>
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Cost</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Cost</div>
                 <div className="text-sm font-semibold">
                   {metrics.isMissingAllInputPrices ? "Unknown" : formatCurrency(totalCost)}
                 </div>
               </div>
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Profit chance</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Profit chance</div>
                 <div className="text-sm font-semibold">
                   {metrics.profitChance === null
                     ? "Unknown"
@@ -1667,31 +1780,31 @@ export default function TradeupPage() {
                 </div>
               </div>
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Profitability</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Profitability</div>
                 <div className={`text-sm font-semibold ${profitabilityTextClass(metrics.profitability)}`}>
                   {formatPercent(metrics.profitability)}
                 </div>
               </div>
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Average return</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Average return</div>
                 <div className="text-sm font-semibold">
                   {formatCurrency(metrics.avgReturn)}
                 </div>
               </div>
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Average profit</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Average profit</div>
                 <div className={`text-sm font-semibold ${profitTextClass(metrics.avgProfit)}`}>
                   {formatSignedCurrency(metrics.avgProfit)}
                 </div>
               </div>
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Max profit</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Max profit</div>
                 <div className={`text-sm font-semibold ${profitTextClass(metrics.maxProfit)}`}>
                   {formatSignedCurrency(metrics.maxProfit)}
                 </div>
               </div>
               <div className={miniPanelClass}>
-                <div className="text-[11px] font-bold uppercase text-slate-400">Max loss</div>
+                <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">Max loss</div>
                 <div className={`text-sm font-semibold ${profitTextClass(metrics.minProfit)}`}>
                   {formatSignedCurrency(metrics.minProfit)}
                 </div>

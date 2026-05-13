@@ -138,20 +138,21 @@ export default async function SkinDetailPage({ params }: PageProps) {
     bestLiveShop?.url ?? resolvedData.marketPage ?? resolvedData.itemPage ?? null;
 
   return (
-    <section className="container-max py-8 space-y-8">
+    <section className="container-max space-y-8 py-8">
       <div className="flex items-center justify-between">
         <Link
           href="/explorer"
-          className="text-sm text-[color:var(--muted)] hover:text-[color:var(--fg)]"
+          className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:text-[color:var(--fg)]"
         >
-          &larr; Zpet do Exploreru
+          <span aria-hidden="true">&larr;</span>
+          Zpet do Exploreru
         </Link>
         <span className="badge">{sourceBadge}</span>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
         <div className="flex flex-col gap-6">
-          <div className="card p-6 flex items-center justify-center bg-gradient-to-br from-[color:var(--card)] to-[color:var(--card-solid)]">
+          <div className="market-stage flex min-h-[28rem] items-center justify-center p-6">
             <img
               src={imageUrl}
               alt={resolvedData.name}
@@ -167,10 +168,10 @@ export default async function SkinDetailPage({ params }: PageProps) {
           />
         </div>
 
-        <div className="card p-6 flex flex-col gap-5">
+        <div className="card flex flex-col gap-5 p-6">
           <div className="space-y-2">
             <div className="kicker">{resolvedData.weapon}</div>
-            <h1 className="display text-3xl font-semibold leading-tight">{resolvedData.skin}</h1>
+            <h1 className="display text-4xl leading-tight">{resolvedData.skin}</h1>
             {resolvedData.wear && (
               <div className="text-sm text-[color:var(--muted)]">{resolvedData.wear}</div>
             )}
@@ -190,9 +191,9 @@ export default async function SkinDetailPage({ params }: PageProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+            <div className="stat-tile">
               <div className="text-[color:var(--muted)]">{headlinePriceLabel}</div>
-              <div className="text-2xl font-semibold">
+              <div className="text-3xl font-black">
                 {formatMoney(headlinePrice)}
               </div>
               <div className="text-xs text-[color:var(--muted)]">
@@ -203,9 +204,9 @@ export default async function SkinDetailPage({ params }: PageProps) {
                     )}`}
               </div>
             </div>
-            <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+            <div className="stat-tile">
               <div className="text-[color:var(--muted)]">Median 7d</div>
-              <div className="text-xl font-semibold">
+              <div className="text-2xl font-black">
                 {formatMoney(resolvedData.median7d)}
               </div>
               <div className="text-xs text-[color:var(--muted)]">
@@ -247,7 +248,7 @@ export default async function SkinDetailPage({ params }: PageProps) {
         <PriceHistoryChart points={history.points} currency={history.currency} />
       </div>
 
-      <div id="shop-offers" className="card scroll-mt-24 p-6 space-y-4">
+      <div id="shop-offers" className="card scroll-mt-24 space-y-4 p-6">
         <div className="flex items-center justify-between">
           <div>
             <div className="kicker">Porovnani shopu</div>
@@ -267,14 +268,14 @@ export default async function SkinDetailPage({ params }: PageProps) {
             {sortedShopPrices.map((shop) => (
               <div
                 key={shop.id}
-                className={`rounded-xl border bg-[color:var(--card)] p-4 text-sm ${
+                className={`rounded-xl border bg-[color:var(--surface-soft)] p-4 text-sm ${
                   bestLiveShop?.id === shop.id
                     ? "border-[color:var(--accent-2)]"
                     : "border-[color:var(--border)]"
                 }`}
               >
-                <div className="font-semibold">{shop.label}</div>
-                <div className="text-lg font-semibold">
+                <div className="font-bold">{shop.label}</div>
+                <div className="text-2xl font-black">
                   {formatShopMoney(shop.price, shop.currency)}
                 </div>
                 {shop.originalPrice !== null &&

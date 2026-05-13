@@ -97,14 +97,14 @@ export default function SkinWearPanel({
   }
 
   return (
-    <div className="card p-6 space-y-5">
+    <div className="card space-y-5 p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="kicker">Wear</div>
           <h3 className="text-xl font-semibold">Float preview</h3>
         </div>
-        <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] px-4 py-3 text-right">
-          <div className="text-[10px] uppercase tracking-[0.24em] text-[color:var(--muted)]">
+        <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-4 py-3 text-right">
+          <div className="text-[10px] font-semibold uppercase text-[color:var(--muted)]">
             Aktivni wear
           </div>
           <div className="text-lg font-semibold">
@@ -116,7 +116,7 @@ export default function SkinWearPanel({
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(16,27,52,0.96),rgba(11,18,36,0.92))] p-5">
+      <div className="market-stage p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="text-[color:var(--muted)]">Rozsah skinu</span>
           <span className="font-medium text-[color:var(--fg)]">
@@ -126,7 +126,7 @@ export default function SkinWearPanel({
 
         <div className="relative px-3 pt-10">
           <div
-            className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lg border border-white/10 bg-slate-300/20 px-3 py-1 text-sm font-semibold text-white shadow-lg shadow-black/30 backdrop-blur"
+            className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lg border border-[color:var(--border)] bg-[color:var(--card-solid)] px-3 py-1 text-sm font-semibold text-[color:var(--fg)] shadow-lg backdrop-blur"
             style={{ left: sliderLeft }}
           >
             {formatFloat(previewFloat)} {currentSegment?.short ?? ""}
@@ -152,7 +152,7 @@ export default function SkinWearPanel({
           </div>
 
           <div
-            className="pointer-events-none absolute top-[2.05rem] z-10 h-6 w-6 -translate-x-1/2 rounded-full border-2 border-slate-950/80 bg-white shadow-[0_0_18px_rgba(15,23,42,0.55)]"
+            className="pointer-events-none absolute top-[2.05rem] z-10 h-6 w-6 -translate-x-1/2 rounded-full border-2 border-[color:var(--card-solid)] bg-[color:var(--fg)] shadow-[0_0_18px_rgba(15,23,42,0.35)]"
             style={{ left: sliderLeft }}
           />
 
@@ -182,8 +182,8 @@ export default function SkinWearPanel({
                 key={segment.label}
                 className={`rounded-xl border px-3 py-2 text-xs transition ${
                   isActive
-                    ? "border-white/20 bg-white/10 text-white"
-                    : "border-white/10 bg-white/[0.03] text-[color:var(--muted)]"
+                    ? "border-[color:var(--accent)] bg-cyan-500/10 text-[color:var(--fg)]"
+                    : "border-[color:var(--border)] bg-[color:var(--surface-soft)] text-[color:var(--muted)]"
                 }`}
               >
                 <div className="font-semibold">{segment.short}</div>

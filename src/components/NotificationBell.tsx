@@ -119,12 +119,16 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
           setOpen((value) => !value);
           if (!open) refresh();
         }}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--border)] bg-[color:var(--card)] text-sm font-semibold transition hover:border-[color:var(--accent-2)]"
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] text-sm font-semibold text-[color:var(--muted)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--fg)]"
         title="Oznameni"
+        aria-label="Oznameni"
       >
-        <span aria-hidden="true">!</span>
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+          <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-[color:var(--danger)] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -143,7 +147,7 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
               type="button"
               onClick={markAllRead}
               disabled={unreadCount === 0}
-              className="rounded-full border border-[color:var(--border)] px-3 py-1 text-xs text-[color:var(--muted)] transition hover:bg-[color:var(--card)] disabled:opacity-45"
+              className="rounded-xl border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--muted)] transition hover:bg-[color:var(--surface-soft)] disabled:opacity-45"
             >
               Precist
             </button>

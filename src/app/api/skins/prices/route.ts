@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { normalizeMarketHashForMeta } from "@/app/lib/skin-meta";
 import {
+  getSkinportHistory,
   getSkinportItems,
   parseMarketHashName,
+  SkinportHistoryItem,
   SkinportItem,
 } from "@/app/lib/skinport";
 
@@ -28,6 +30,19 @@ const DB_PRICE_TTL_MS = 1000 * 60 * 30;
 const priceFromItem = (item?: SkinportItem | null) => {
   if (!item) return null;
   return item.min_price ?? item.median_price ?? item.suggested_price ?? null;
+};
+
+const priceFromHistory = (item?: SkinportHistoryItem | null) => {
+  if (!item) return null;
+  return (
+    item.last_7_days?.median ??
+    item.last_7_days?.avg ??
+    item.last_30_days?.median ??
+    item.last_30_days?.avg ??
+    item.last_90_days?.median ??
+    item.last_90_days?.avg ??
+    null
+  );
 };
 
 const buildLookupKey = (marketHashName: string) => {
@@ -171,8 +186,13 @@ export async function POST(req: NextRequest) {
 
     missing = unique.filter((name) => !found.has(name));
     if (missing.length) {
-      const items = await getSkinportItems();
+      const [items, history] = await Promise.all([
+        getSkinportItems(),
+        getSkinportHistory().catch(() => []),
+      ]);
       const skinportByLookup = new Map<string, SkinportItem>();
+      const historyByLower = new Map<string, SkinportHistoryItem>();
+      const historyByLookup = new Map<string, SkinportHistoryItem>();
 
       for (const item of Object.values(items)) {
         const key = buildLookupKey(item.market_hash_name);
@@ -181,24 +201,61 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      for (const item of history) {
+        historyByLower.set(item.market_hash_name.toLowerCase(), item);
+        const key = buildLookupKey(item.market_hash_name);
+        if (!historyByLookup.has(key)) {
+          historyByLookup.set(key, item);
+        }
+      }
+
       for (const name of missing) {
         const exact = items[name.toLowerCase()] ?? items[name] ?? null;
         const item = exact ?? skinportByLookup.get(buildLookupKey(name)) ?? null;
+        const exactHistory = historyByLower.get(name.toLowerCase()) ?? null;
+        const historyItem =
+          exactHistory ?? historyByLookup.get(buildLookupKey(name)) ?? null;
+        const itemPrice = priceFromItem(item);
+        const historyPrice = priceFromHistory(historyItem);
+
+        if (item && itemPrice !== null) {
+          priceMap[name] = {
+            price: itemPrice,
+            currency: item.currency ?? "EUR",
+            source: exact ? "skinport" : "skinport-normalized",
+            updatedAt: unixToIso(item.updated_at),
+            stale: false,
+          };
+          stats.matchedSkinport += 1;
+          continue;
+        }
+
+        if (historyPrice !== null) {
+          priceMap[name] = {
+            price: historyPrice,
+            currency: historyItem?.currency ?? item?.currency ?? "EUR",
+            source: exactHistory ? "skinport-history" : "skinport-history-normalized",
+            updatedAt: null,
+            stale: false,
+          };
+          stats.matchedSkinport += 1;
+          continue;
+        }
+
+        const staleRow = staleDbRows.get(name.toLowerCase()) ?? null;
+        if (staleRow) {
+          priceMap[name] = {
+            price: staleRow.price ?? null,
+            currency: staleRow.currency ?? "EUR",
+            source: "db-stale",
+            updatedAt: staleRow.updatedAt?.toISOString() ?? null,
+            stale: true,
+          };
+          stats.matchedDbStaleFallback += 1;
+          continue;
+        }
 
         if (!item) {
-          const staleRow = staleDbRows.get(name.toLowerCase()) ?? null;
-          if (staleRow) {
-            priceMap[name] = {
-              price: staleRow.price ?? null,
-              currency: staleRow.currency ?? "EUR",
-              source: "db-stale",
-              updatedAt: staleRow.updatedAt?.toISOString() ?? null,
-              stale: true,
-            };
-            stats.matchedDbStaleFallback += 1;
-            continue;
-          }
-
           priceMap[name] = {
             price: null,
             currency: "EUR",
@@ -211,7 +268,7 @@ export async function POST(req: NextRequest) {
         }
 
         priceMap[name] = {
-          price: priceFromItem(item),
+          price: itemPrice,
           currency: item.currency ?? "EUR",
           source: exact ? "skinport" : "skinport-normalized",
           updatedAt: unixToIso(item.updated_at),

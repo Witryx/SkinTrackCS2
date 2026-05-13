@@ -164,7 +164,7 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
             </div>
           )}
         </div>
-        <div className="inline-flex items-center gap-1 rounded-full border border-[color:var(--border)] bg-[color:var(--card-solid)] p-1 shadow-sm">
+        <div className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-1 shadow-sm">
           {periods.map((opt) => {
             const active = opt.id === period.id;
             return (
@@ -172,7 +172,7 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
                 key={opt.id}
                 type="button"
                 onClick={() => setPeriod(opt)}
-                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                   active
                     ? "bg-[color:var(--fg)] text-[color:var(--bg)]"
                     : "text-[color:var(--muted)] hover:text-[color:var(--fg)]"
@@ -193,7 +193,7 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
       )}
 
       {hasData && (
-        <div className="h-64 rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-3">
+        <div className="h-64 rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-3">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 18, left: 0, bottom: 0 }}>
               <defs>
@@ -268,19 +268,19 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
       )}
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] px-4 py-3 text-sm">
+        <div className="stat-tile text-sm">
           <div className="text-[color:var(--muted)]">Minimum</div>
           <div className="text-lg font-semibold">
             {stats.min !== null ? currencyFormatter.format(stats.min) : "-"}
           </div>
         </div>
-        <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] px-4 py-3 text-sm">
+        <div className="stat-tile text-sm">
           <div className="text-[color:var(--muted)]">Maximum</div>
           <div className="text-lg font-semibold">
             {stats.max !== null ? currencyFormatter.format(stats.max) : "-"}
           </div>
         </div>
-        <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] px-4 py-3 text-sm">
+        <div className="stat-tile text-sm">
           <div className="text-[color:var(--muted)]">Zmena</div>
           <div
             className={`text-lg font-semibold ${
