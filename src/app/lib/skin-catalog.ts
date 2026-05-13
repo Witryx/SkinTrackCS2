@@ -38,6 +38,10 @@ const toSearchResult = (item: SkinCatalogItem, index: number): SkinSearchResult 
     skin: item.skin,
     wear: item.wear,
     rarity,
+    collections: item.collections,
+    primaryCollection: item.collections[0] ?? null,
+    containers: item.containers,
+    primaryContainer: item.containers[0] ?? null,
     minFloat: item.minFloat,
     maxFloat: item.maxFloat,
     price: null,
@@ -48,6 +52,7 @@ const toSearchResult = (item: SkinCatalogItem, index: number): SkinSearchResult 
     quantity: null,
     itemPage: null,
     marketPage: url,
+    imageUrl: item.imageUrl ?? null,
   };
 };
 
@@ -105,6 +110,8 @@ export async function getSkinDetailLocal(name: string): Promise<SkinDetail | nul
     weapon: item.weapon,
     skin: item.skin,
     wear: item.wear,
+    minFloat: item.minFloat,
+    maxFloat: item.maxFloat,
     price: null,
     volume7d: null,
     median7d: null,

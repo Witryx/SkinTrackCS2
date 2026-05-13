@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
 import { useEffect, useRef, useState } from "react";
+import NotificationBell from "./NotificationBell";
 
 export default function Header() {
   const [steamId, setSteamId] = useState<string | null>(null);
@@ -94,7 +95,17 @@ export default function Header() {
             Explorer
           </Link>
 
+          {steamId && (
+            <Link
+              href="/wishlist"
+              className="rounded-full px-3 py-2 text-sm text-[color:var(--muted)] transition hover:bg-[color:var(--card)] hover:text-[color:var(--fg)]"
+            >
+              Wishlist
+            </Link>
+          )}
+
           <ThemeToggle />
+          <NotificationBell steamId={steamId} />
 
           {!steamId && (
             <button
@@ -122,10 +133,10 @@ export default function Header() {
               {open && (
                 <div className="absolute right-0 mt-2 w-56 card p-2 shadow-lg animate-fade-slide">
                   <Link
-                    href="/favorites"
+                    href="/wishlist"
                     className="block rounded-lg px-3 py-2 text-sm text-[color:var(--muted)] hover:bg-[color:var(--card-solid)]"
                   >
-                    Oblibene skiny (brzy)
+                    Wishlist
                   </Link>
 
                   <Link

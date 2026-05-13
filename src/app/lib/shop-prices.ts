@@ -1,11 +1,19 @@
 import nacl from "tweetnacl";
-import { getSkinportItems, SkinportItem } from "@/app/lib/skinport";
+import { convertCurrency } from "@/app/lib/exchange-rates";
+import { normalizeMarketHashForMeta } from "@/app/lib/skin-meta";
+import {
+  getSkinportItems,
+  parseMarketHashName,
+  SkinportItem,
+} from "@/app/lib/skinport";
 
 type ShopPrice = {
   id: string;
   label: string;
   price: number | null;
   currency: string;
+  originalPrice?: number | null;
+  originalCurrency?: string | null;
   url?: string;
   note?: string;
 };
@@ -18,6 +26,9 @@ type CacheEntry = {
 const cache = new Map<string, CacheEntry>();
 const TTL_MS = 1000 * 60 * 5;
 const REQUEST_TIMEOUT_MS = 4000;
+const DMARKET_SEARCH_URL =
+  "https://dmarket.com/ingame-items/item-list/csgo-skins";
+const CSFLOAT_SEARCH_URL = "https://csfloat.com/search";
 
 const parseMoney = (value?: string | null) => {
   if (!value) return null;
@@ -41,9 +52,43 @@ const parseMoney = (value?: string | null) => {
   return Number.isFinite(num) ? num : null;
 };
 
+const parseNumeric = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") return parseMoney(value);
+  return null;
+};
+
 const priceFromItem = (item?: SkinportItem | null) => {
   if (!item) return null;
   return item.min_price ?? item.median_price ?? item.suggested_price ?? null;
+};
+
+const normalizeMinorUnitPrice = (value: unknown) => {
+  const parsed = parseNumeric(value);
+  if (parsed === null) return null;
+  return Number.isInteger(parsed) ? parsed / 100 : parsed;
+};
+
+const joinNotes = (...values: Array<string | null | undefined>) =>
+  values
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join(" / ");
+
+const buildDMarketSearchUrl = (marketHashName: string) =>
+  `${DMARKET_SEARCH_URL}?title=${encodeURIComponent(marketHashName)}`;
+
+const buildCsFloatSearchUrl = (marketHashName: string) =>
+  `${CSFLOAT_SEARCH_URL}?market_hash_name=${encodeURIComponent(marketHashName)}`;
+
+const buildSkinportLookupKey = (marketHashName: string) => {
+  const parsed = parseMarketHashName(marketHashName);
+  const weaponLower = parsed.weapon.toLowerCase();
+  const wear = (parsed.wear ?? "").toLowerCase();
+  const stattrak = weaponLower.includes("stattrak") ? "st" : "nost";
+  const souvenir = weaponLower.includes("souvenir") ? "sou" : "nos";
+  const normalized = normalizeMarketHashForMeta(marketHashName);
+  return `${normalized}|${wear}|${stattrak}|${souvenir}`;
 };
 
 const hexToBytes = (value: string) => {
@@ -101,20 +146,74 @@ const normalizeHexKey = (value: string) =>
 
 const isHexKey = (value: string) => /^[0-9a-f]+$/i.test(value);
 
+const normalizeShopToEur = async (shop: ShopPrice): Promise<ShopPrice> => {
+  if (shop.price === null) {
+    return {
+      ...shop,
+      currency: "EUR",
+    };
+  }
+
+  const originalCurrency = shop.currency.trim().toUpperCase() || "EUR";
+  if (originalCurrency === "EUR") {
+    return {
+      ...shop,
+      currency: "EUR",
+    };
+  }
+
+  const converted = await convertCurrency(shop.price, originalCurrency, "EUR");
+  if (converted === null) {
+    return {
+      ...shop,
+      note: joinNotes(shop.note, `Kurz ${originalCurrency}->EUR nedostupny`),
+    };
+  }
+
+  return {
+    ...shop,
+    price: converted,
+    currency: "EUR",
+    originalPrice: shop.price,
+    originalCurrency,
+    note: joinNotes(shop.note, `Prevedeno z ${originalCurrency}`),
+  };
+};
+
 const fetchSkinport = async (marketHashName: string): Promise<ShopPrice> => {
   try {
     const items = await getSkinportItems();
-    const item =
+    const exact =
       items[marketHashName.toLowerCase()] ?? items[marketHashName] ?? null;
+    let item: SkinportItem | null = exact;
+
+    if (!item) {
+      const skinportByLookup = new Map<string, SkinportItem>();
+      for (const candidate of Object.values(items)) {
+        const key = buildSkinportLookupKey(candidate.market_hash_name);
+        if (!skinportByLookup.has(key)) {
+          skinportByLookup.set(key, candidate);
+        }
+      }
+      item = skinportByLookup.get(buildSkinportLookupKey(marketHashName)) ?? null;
+    }
+
     const price = priceFromItem(item);
     return {
       id: "skinport",
       label: "Skinport",
       price,
       currency: item?.currency ?? "EUR",
+      note: item
+        ? price === null
+          ? "Bez ceny v live feedu"
+          : exact
+            ? undefined
+            : "Normalizovany match"
+        : "Neni v live Skinport tradable feedu",
       url: item?.market_page ?? item?.item_page ?? "https://skinport.com",
     };
-  } catch (err) {
+  } catch {
     return {
       id: "skinport",
       label: "Skinport",
@@ -147,7 +246,7 @@ const fetchSteamMarket = async (marketHashName: string): Promise<ShopPrice> => {
         marketHashName
       )}`,
     };
-  } catch (err) {
+  } catch {
     return {
       id: "steam",
       label: "Steam Market",
@@ -162,6 +261,7 @@ const fetchSteamMarket = async (marketHashName: string): Promise<ShopPrice> => {
 };
 
 const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
+  const searchUrl = buildCsFloatSearchUrl(marketHashName);
   const params = new URLSearchParams({
     market_hash_name: marketHashName,
     sort_by: "lowest_price",
@@ -178,9 +278,9 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
       id: "csfloat",
       label: "CSFloat",
       price: null,
-      currency: "USD",
-      note: "Chybi API key",
-      url: "https://csfloat.com/market",
+      currency: "EUR",
+      note: "Vyzaduje API key nebo login",
+      url: searchUrl,
     };
   }
 
@@ -193,24 +293,42 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
         id: "csfloat",
         label: "CSFloat",
         price: null,
-        currency: "USD",
-        note: `Nedostupne (${res.status})`,
-        url: "https://csfloat.com/market",
+        currency: "EUR",
+        note:
+          res.status === 403
+            ? "Vyzaduje API key nebo login"
+            : `Nedostupne (${res.status})`,
+        url: searchUrl,
       };
     }
     const data = await res.json();
-    const listing = Array.isArray(data) ? data[0] : null;
-    const priceCents = listing?.price ?? null;
-    const price =
-      typeof priceCents === "number" ? Math.round(priceCents) / 100 : null;
+    const listing = (() => {
+      if (Array.isArray(data)) return data[0] ?? null;
+      if (data && typeof data === "object") {
+        const record = data as Record<string, unknown>;
+        const buckets = ["data", "listings", "results", "items"];
+        for (const bucket of buckets) {
+          const value = record[bucket];
+          if (Array.isArray(value)) {
+            return value[0] ?? null;
+          }
+        }
+      }
+      return null;
+    })();
+    const price = normalizeMinorUnitPrice(
+      listing && typeof listing === "object"
+        ? (listing as Record<string, unknown>).price
+        : null
+    );
 
     return {
       id: "csfloat",
       label: "CSFloat",
       price,
       currency: "USD",
-      note: "Nejnizsi listing (buy now)",
-      url: "https://csfloat.com/market",
+      note: "Nejnizsi buy now listing",
+      url: searchUrl,
     };
   } catch (err) {
     console.warn("CSFloat API request failed", err);
@@ -218,9 +336,9 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
       id: "csfloat",
       label: "CSFloat",
       price: null,
-      currency: "USD",
+      currency: "EUR",
       note: "Nedostupne",
-      url: "https://csfloat.com/market",
+      url: searchUrl,
     };
   }
 };
@@ -228,12 +346,46 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
 type DMarketAggregated = {
   aggregatedPrices?: Array<{
     title?: string;
-    offerBestPrice?: string;
-    orderBestPrice?: string;
+    offerBestPrice?:
+      | string
+      | {
+          Currency?: string;
+          Amount?: string;
+        };
+    orderBestPrice?:
+      | string
+      | {
+          Currency?: string;
+          Amount?: string;
+        };
   }>;
 };
 
+const parseDMarketMoney = (value: unknown) => {
+  if (!value) return { price: null, currency: null as string | null };
+  if (typeof value === "string") {
+    return {
+      price: normalizeMinorUnitPrice(value),
+      currency: null as string | null,
+    };
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return {
+      price: normalizeMinorUnitPrice(record.Amount ?? record.amount ?? null),
+      currency:
+        typeof record.Currency === "string"
+          ? record.Currency
+          : typeof record.currency === "string"
+            ? record.currency
+            : null,
+    };
+  }
+  return { price: null, currency: null as string | null };
+};
+
 const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
+  const searchUrl = buildDMarketSearchUrl(marketHashName);
   const rawPublicKey = process.env.DMARKET_PUBLIC_KEY;
   const rawSecretKey = process.env.DMARKET_SECRET_KEY;
   const publicKey = rawPublicKey ? normalizeHexKey(rawPublicKey) : "";
@@ -243,9 +395,9 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       id: "dmarket",
       label: "DMarket",
       price: null,
-      currency: "USD",
-      note: "Chybi API klic",
-      url: "https://dmarket.com/ingame-items/item-list/csgo-skins",
+      currency: "EUR",
+      note: "Presna cena vyzaduje API klic",
+      url: searchUrl,
     };
   }
   if (!isHexKey(publicKey) || !isHexKey(secretKey)) {
@@ -253,9 +405,9 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       id: "dmarket",
       label: "DMarket",
       price: null,
-      currency: "USD",
+      currency: "EUR",
       note: "Neplatny format API klice",
-      url: "https://dmarket.com/ingame-items/item-list/csgo-skins",
+      url: searchUrl,
     };
   }
   if (publicKey.length !== 64 || (secretKey.length !== 64 && secretKey.length !== 128)) {
@@ -263,9 +415,9 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       id: "dmarket",
       label: "DMarket",
       price: null,
-      currency: "USD",
+      currency: "EUR",
       note: "Neplatna delka API klice",
-      url: "https://dmarket.com/ingame-items/item-list/csgo-skins",
+      url: searchUrl,
     };
   }
 
@@ -296,21 +448,33 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
         id: "dmarket",
         label: "DMarket",
         price: null,
-        currency: "USD",
+        currency: "EUR",
         note: `Nedostupne (${res.status})`,
-        url: "https://dmarket.com/ingame-items/item-list/csgo-skins",
+        url: searchUrl,
       };
     }
     const data = (await res.json()) as DMarketAggregated;
-    const entry = data.aggregatedPrices?.[0];
-    const price = parseMoney(entry?.offerBestPrice ?? entry?.orderBestPrice ?? null);
+    const entry =
+      data.aggregatedPrices?.find(
+        (candidate) =>
+          candidate.title?.trim().toLowerCase() ===
+          marketHashName.trim().toLowerCase()
+      ) ?? data.aggregatedPrices?.[0];
+    const exactMatch =
+      entry?.title?.trim().toLowerCase() === marketHashName.trim().toLowerCase();
+    const bestPrice = parseDMarketMoney(
+      entry?.offerBestPrice ?? entry?.orderBestPrice ?? null
+    );
     return {
       id: "dmarket",
       label: "DMarket",
-      price,
-      currency: "USD",
-      note: "Best offer price",
-      url: "https://dmarket.com/ingame-items/item-list/csgo-skins",
+      price: exactMatch ? bestPrice.price : null,
+      currency: bestPrice.currency ?? "USD",
+      note:
+        entry?.title && !exactMatch
+          ? `Nepresny match: ${entry.title}`
+          : "Best offer price",
+      url: searchUrl,
     };
   } catch (err) {
     console.warn("DMarket API request failed", err);
@@ -318,9 +482,9 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       id: "dmarket",
       label: "DMarket",
       price: null,
-      currency: "USD",
+      currency: "EUR",
       note: "Nedostupne / chybi prava",
-      url: "https://dmarket.com/ingame-items/item-list/csgo-skins",
+      url: searchUrl,
     };
   }
 };
@@ -341,7 +505,9 @@ export async function getShopPrices(marketHashName: string) {
     fetchCsFloat(marketHashName),
   ]);
 
-  const data = [skinport, steam, dmarket, csfloat];
+  const data = await Promise.all(
+    [skinport, steam, dmarket, csfloat].map((shop) => normalizeShopToEur(shop))
+  );
   cache.set(key, { data, fetchedAt: now });
   return data;
 }

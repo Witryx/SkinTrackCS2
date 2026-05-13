@@ -2,7 +2,25 @@ export interface SteamProfile {
   steamid: string;
 }
 
-export default function SteamProvider(options: any = {}): any {
+type SteamProviderOptions = Record<string, unknown>;
+
+type SteamProviderConfig = SteamProviderOptions & {
+  id: string;
+  name: string;
+  type: "oauth";
+  version: "2.0";
+  authorization: {
+    url: string;
+    params: Record<string, string | undefined>;
+  };
+  token: { url: string };
+  userinfo: { url: string };
+  profile: (profile: SteamProfile) => Promise<{ id: string }>;
+};
+
+export default function SteamProvider(
+  options: SteamProviderOptions = {}
+): SteamProviderConfig {
   return {
     id: "steam",
     name: "Steam",
@@ -32,7 +50,7 @@ export default function SteamProvider(options: any = {}): any {
       };
     },
 
-    // umožní přidat clientSecret atd. z route.ts
+    // Umozni pridat clientSecret atd. z route.ts.
     ...options,
   };
 }

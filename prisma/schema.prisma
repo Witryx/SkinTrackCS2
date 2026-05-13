@@ -15,7 +15,8 @@ model User {
   avatarUrl String?
   createdAt DateTime  @default(now())
 
-  favorites Favorite[]
+  favorites     Favorite[]
+  notifications Notification[]
 }
 
 model Skin {
@@ -42,6 +43,7 @@ model Skin {
 
   priceHistory   PriceHistory[]
   favorites      Favorite[]
+  notifications  Notification[]
 
   @@index([weapon, skin])
   @@index([rarity])
@@ -74,12 +76,46 @@ model PriceHistory {
 }
 
 model Favorite {
-  userId    Int
-  skinId    Int
-  createdAt DateTime @default(now())
+  userId             Int
+  skinId             Int
+  emailAlertsEnabled Boolean   @default(true)
+  lastEmailAlertAt   DateTime?
+  createdAt          DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id])
   skin Skin @relation(fields: [skinId], references: [id])
 
   @@id([userId, skinId])
+}
+
+model Notification {
+  id            Int                   @id @default(autoincrement())
+  userId        Int
+  skinId        Int
+  type          NotificationType      @default(PRICE_CHANGE)
+  title         String
+  message       String                @db.Text
+  previousPrice Float?
+  currentPrice  Float?
+  changePercent Float?
+  direction     PriceChangeDirection?
+  currency      String                @default("EUR")
+  readAt        DateTime?
+  emailedAt     DateTime?
+  createdAt     DateTime              @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skin Skin @relation(fields: [skinId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([skinId, createdAt])
+}
+
+enum NotificationType {
+  PRICE_CHANGE
+}
+
+enum PriceChangeDirection {
+  UP
+  DOWN
 }

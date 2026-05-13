@@ -56,6 +56,10 @@ export type TrendSkin = ParsedName & {
   median7d: number | null;
   quantity: number | null;
   rarity?: string | null;
+  collections?: string[];
+  primaryCollection?: string | null;
+  containers?: string[];
+  primaryContainer?: string | null;
   itemPage?: string;
   marketPage?: string;
 };
@@ -66,6 +70,8 @@ export type SkinDetail = TrendSkin & {
   meanPrice: number | null;
   medianPrice: number | null;
   suggestedPrice: number | null;
+  minFloat: number | null;
+  maxFloat: number | null;
 };
 
 type CacheEntry<T> = {
@@ -233,11 +239,18 @@ export async function getTrendingSkins() {
       parsed.skin,
       entry.market_hash_name
     );
+    const collections =
+      meta?.collections?.length ? meta.collections : meta?.containers ?? [];
+    const containers = meta?.containers ?? [];
 
     return {
       name: entry.market_hash_name,
       price: priceCandidate,
       rarity: meta?.rarity ?? resolveRarity(priceCandidate),
+      collections,
+      primaryCollection: collections[0] ?? null,
+      containers,
+      primaryContainer: containers[0] ?? null,
       volume7d: entry.last_7_days?.volume ?? 0,
       median7d: entry.last_7_days?.median ?? null,
       quantity: item?.quantity ?? null,
@@ -345,10 +358,17 @@ export async function searchSkins({
       );
       const price =
         item.min_price ?? item.median_price ?? item.suggested_price ?? null;
+      const collections =
+        meta?.collections?.length ? meta.collections : meta?.containers ?? [];
+      const containers = meta?.containers ?? [];
       return {
         name: item.market_hash_name,
         price,
         rarity: meta?.rarity ?? resolveRarity(price),
+        collections,
+        primaryCollection: collections[0] ?? null,
+        containers,
+        primaryContainer: containers[0] ?? null,
         volume7d: hist?.last_7_days?.volume ?? 0,
         median7d: hist?.last_7_days?.median ?? null,
         quantity: item.quantity,
@@ -411,6 +431,9 @@ export async function getSkinByName(name: string): Promise<SkinDetail | null> {
     parsed.skin,
     resolvedName
   );
+  const collections =
+    meta?.collections?.length ? meta.collections : meta?.containers ?? [];
+  const containers = meta?.containers ?? [];
 
   const priceCandidate =
     itemCandidate?.min_price ??
@@ -424,6 +447,12 @@ export async function getSkinByName(name: string): Promise<SkinDetail | null> {
     name: resolvedName,
     price: priceCandidate,
     rarity: meta?.rarity ?? resolveRarity(priceCandidate),
+    collections,
+    primaryCollection: collections[0] ?? null,
+    containers,
+    primaryContainer: containers[0] ?? null,
+    minFloat: meta?.minFloat ?? null,
+    maxFloat: meta?.maxFloat ?? null,
     volume7d: historyEntry?.last_7_days?.volume ?? 0,
     median7d: historyEntry?.last_7_days?.median ?? null,
     quantity: itemCandidate?.quantity ?? null,

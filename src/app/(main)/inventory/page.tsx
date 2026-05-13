@@ -28,6 +28,8 @@ type PriceEntry = {
   price: number | null;
   currency: string;
   source: string;
+  updatedAt: string | null;
+  stale: boolean;
 };
 
 type SortMode =
@@ -50,6 +52,9 @@ type WearName =
 type EnrichedInventoryItem = InventoryItem & {
   price: number | null;
   value: number | null;
+  priceSource: string;
+  priceUpdatedAt: string | null;
+  priceStale: boolean;
   rarity: Rarity;
   category: Category;
   typeGroup: string;
@@ -65,6 +70,15 @@ const currency = new Intl.NumberFormat("cs-CZ", {
   currency: "EUR",
   maximumFractionDigits: 2,
 });
+
+const dateTimeFormatter = new Intl.DateTimeFormat("cs-CZ", {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const PRICE_REFRESH_MS = 1000 * 60 * 5;
 
 const rarityRank: Record<Rarity, number> = {
   Consumer: 1,
@@ -243,6 +257,28 @@ const formatStat = (value: number | null | undefined) =>
 const formatFloat = (value: number | null | undefined) =>
   typeof value === "number" ? value.toFixed(4) : "-";
 
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+  return dateTimeFormatter.format(parsed);
+};
+
+const getPriceSourceLabel = (
+  source: string | null | undefined,
+  stale = false
+) => {
+  if (!source || source === "missing") return "Bez ceny";
+  if (source === "db" || source === "db-normalized") {
+    return stale ? "DB cache (stara)" : "DB cache";
+  }
+  if (source === "db-stale") return "DB fallback";
+  if (source === "skinport" || source === "skinport-normalized") {
+    return "Skinport live";
+  }
+  return source;
+};
+
 const getFloatLabel = (
   value: number | null | undefined,
   source?: "exact" | "steam" | "estimated" | "unknown"
@@ -287,6 +323,8 @@ export default function InventoryPage() {
   const [priceMap, setPriceMap] = useState<Record<string, PriceEntry>>({});
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
+  const [priceLastSyncedAt, setPriceLastSyncedAt] = useState<string | null>(null);
+  const [priceRefreshNonce, setPriceRefreshNonce] = useState(0);
   const [exactFloatMap, setExactFloatMap] = useState<Record<string, number | null>>({});
   const [floatLoadingAssetId, setFloatLoadingAssetId] = useState<string | null>(null);
   const [floatError, setFloatError] = useState<string | null>(null);
@@ -352,6 +390,7 @@ export default function InventoryPage() {
   useEffect(() => {
     if (!steamItems.length) {
       setPriceMap({});
+      setPriceLastSyncedAt(null);
       setExactFloatMap({});
       setFloatError(null);
       return;
@@ -378,6 +417,7 @@ export default function InventoryPage() {
       })
       .then((data) => {
         setPriceMap(data.prices ?? {});
+        setPriceLastSyncedAt(new Date().toISOString());
       })
       .catch((err) => {
         if (err.name === "AbortError") return;
@@ -386,11 +426,35 @@ export default function InventoryPage() {
       .finally(() => setPriceLoading(false));
 
     return () => controller.abort();
-  }, [steamItems]);
+  }, [steamItems, priceRefreshNonce]);
+
+  useEffect(() => {
+    if (!steamItems.length) return;
+
+    const refreshPrices = () => setPriceRefreshNonce((value) => value + 1);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        refreshPrices();
+      }
+    }, PRICE_REFRESH_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshPrices();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [steamItems.length]);
 
   const enrichedItems = useMemo(() => {
     return steamItems.map<EnrichedInventoryItem>((item, index) => {
-      const price = priceMap[item.marketHashName]?.price ?? null;
+      const priceEntry = priceMap[item.marketHashName];
+      const price = priceEntry?.price ?? null;
       const rarity =
         rarityFromTag(item.rarityTag ?? null) ??
         rarityFromType(item.type) ??
@@ -424,6 +488,9 @@ export default function InventoryPage() {
         position: typeof item.position === "number" ? item.position : index,
         price,
         value: price !== null ? price * item.amount : null,
+        priceSource: priceEntry?.source ?? "missing",
+        priceUpdatedAt: priceEntry?.updatedAt ?? null,
+        priceStale: priceEntry?.stale ?? false,
         rarity,
         category,
         typeGroup,
@@ -551,6 +618,36 @@ export default function InventoryPage() {
     selectedItem?.floatEstimate,
     selectedItem?.floatSource
   );
+  const selectedItemPriceSource = getPriceSourceLabel(
+    selectedItem?.priceSource,
+    selectedItem?.priceStale
+  );
+  const priceSummary = useMemo(() => {
+    const summary = {
+      live: 0,
+      cached: 0,
+      stale: 0,
+      missing: 0,
+    };
+
+    for (const entry of Object.values(priceMap)) {
+      if (entry.source === "db-stale" || entry.stale) {
+        summary.stale += 1;
+        continue;
+      }
+      if (entry.source === "db" || entry.source === "db-normalized") {
+        summary.cached += 1;
+        continue;
+      }
+      if (entry.source === "skinport" || entry.source === "skinport-normalized") {
+        summary.live += 1;
+        continue;
+      }
+      summary.missing += 1;
+    }
+
+    return summary;
+  }, [priceMap]);
 
   useEffect(() => {
     const hasResolvedExact = (assetId: string) =>
@@ -727,6 +824,13 @@ export default function InventoryPage() {
             </button>
           ))}
           {priceLoading && <span className="text-xs text-[color:var(--muted)]">Nacitani cen...</span>}
+          {!priceLoading && priceLastSyncedAt && (
+            <span className="text-xs text-[color:var(--muted)]">
+              Ceny {formatDateTime(priceLastSyncedAt)} • live {priceSummary.live} •
+              cache {priceSummary.cached} • stale {priceSummary.stale}
+              {priceSummary.missing ? ` • bez ceny ${priceSummary.missing}` : ""}
+            </span>
+          )}
         </div>
 
         {filtersOpen && (
@@ -944,6 +1048,14 @@ export default function InventoryPage() {
                     <span className="font-semibold">{selectedItem.price !== null ? currency.format(selectedItem.price) : "-"}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Mnozstvi</span><span>x{selectedItem.amount}</span></div>
+                  <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
+                    <span>Zdroj ceny</span>
+                    <span>{selectedItemPriceSource}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
+                    <span>Aktualizovano</span>
+                    <span>{formatDateTime(selectedItem.priceUpdatedAt)}</span>
+                  </div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Category</span><span>{selectedItem.category}</span></div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Collection</span><span>{selectedItem.collectionValue}</span></div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Rarity</span><span>{selectedItem.rarity}</span></div>
@@ -967,4 +1079,3 @@ export default function InventoryPage() {
     </section>
   );
 }
-

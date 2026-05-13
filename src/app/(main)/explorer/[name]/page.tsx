@@ -1,12 +1,11 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSkinDetailLocal } from "@/app/lib/skin-catalog";
 import {
   getSkinFromDb,
   getSkinPriceHistory,
+  isPriceSnapshotStale,
   recordShopPriceHistory,
-  recordSkinPriceHistory,
   upsertSkinFromSkinportName,
 } from "@/app/lib/skin-database";
 import { getSkinImageUrl } from "@/app/lib/skin-images";
@@ -14,6 +13,9 @@ import { rarityBgClass } from "@/app/lib/rarity";
 import { getShopPrices, type ShopPrice } from "@/app/lib/shop-prices";
 import { getSkinByName } from "@/app/lib/skinport";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
+import SmoothScrollButton from "@/components/SmoothScrollButton";
+import SkinWearPanel from "@/components/SkinWearPanel";
+import WishlistButton from "@/components/WishlistButton";
 
 const currency = new Intl.NumberFormat("cs-CZ", {
   style: "currency",
@@ -21,8 +23,20 @@ const currency = new Intl.NumberFormat("cs-CZ", {
   maximumFractionDigits: 2,
 });
 
-const formatNumber = (value: number | null | undefined) =>
-  typeof value === "number" ? value.toLocaleString("cs-CZ") : "-";
+const formatMoney = (value: number | null | undefined) =>
+  typeof value === "number" ? currency.format(value) : "-";
+
+const formatShopMoney = (
+  value: number | null | undefined,
+  currencyCode: string
+) =>
+  typeof value === "number"
+    ? new Intl.NumberFormat("cs-CZ", {
+        style: "currency",
+        currency: currencyCode,
+        maximumFractionDigits: 2,
+      }).format(value)
+    : "-";
 
 type PageProps = {
   params: { name: string };
@@ -51,112 +65,6 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, fallback:
   }
 };
 
-function ShopPricesFallback() {
-  return (
-    <div className="card p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="kicker">Porovnani shopu</div>
-          <h3 className="text-xl font-semibold">Ceny na trzistich</h3>
-        </div>
-        <span className="text-xs text-[color:var(--muted)]">nacitam...</span>
-      </div>
-      <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-6 text-sm text-[color:var(--muted)]">
-        Nacitam live ceny z marketu...
-      </div>
-    </div>
-  );
-}
-
-function PriceHistoryFallback() {
-  return (
-    <div className="card p-6">
-      <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-12 text-center text-sm text-[color:var(--muted)]">
-        Nacitam cenovy graf...
-      </div>
-    </div>
-  );
-}
-
-async function PriceHistorySection({ historyName }: { historyName: string }) {
-  const history = await getSkinPriceHistory(historyName, 90).catch(() => ({
-    points: [],
-    currency: "EUR",
-  }));
-
-  return (
-    <div className="card p-6">
-      <PriceHistoryChart points={history.points} currency={history.currency} />
-    </div>
-  );
-}
-
-async function ShopPricesSection({ historyName }: { historyName: string }) {
-  const shopPrices = await getShopPrices(historyName).catch(() => []);
-  const sortedShopPrices = sortShopPrices(shopPrices);
-
-  if (shopPrices.length > 0) {
-    void recordShopPriceHistory(historyName, shopPrices).catch((error) => {
-      console.error("recordShopPriceHistory background sync failed", error);
-    });
-  }
-
-  return (
-    <div className="card p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="kicker">Porovnani shopu</div>
-          <h3 className="text-xl font-semibold">Ceny na trzistich</h3>
-        </div>
-        <span className="text-xs text-[color:var(--muted)]">live</span>
-      </div>
-
-      {!sortedShopPrices.length && (
-        <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-6 text-sm text-[color:var(--muted)]">
-          Ceny se nepodarilo nacist.
-        </div>
-      )}
-
-      {!!sortedShopPrices.length && (
-        <div className="grid gap-3 md:grid-cols-3">
-          {sortedShopPrices.map((shop) => (
-            <div
-              key={shop.id}
-              className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 text-sm"
-            >
-              <div className="font-semibold">{shop.label}</div>
-              <div className="text-lg font-semibold">
-                {shop.price !== null
-                  ? new Intl.NumberFormat("cs-CZ", {
-                      style: "currency",
-                      currency: shop.currency,
-                      maximumFractionDigits: 2,
-                    }).format(shop.price)
-                  : "-"}
-              </div>
-              {shop.note && (
-                <div className="text-xs text-[color:var(--muted)]">
-                  {shop.note}
-                </div>
-              )}
-              {shop.url && (
-                <a
-                  href={shop.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-block text-xs text-[color:var(--accent-2)] hover:underline"
-                >
-                  Otevrit shop
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export async function generateMetadata({ params }: PageProps) {
   const decodedName = decodeURIComponent(params.name);
   return {
@@ -172,38 +80,62 @@ export default async function SkinDetailPage({ params }: PageProps) {
     getSkinFromDb(decodedName),
     getSkinDetailLocal(decodedName).catch(() => null),
   ]);
-  const skinportData =
-    dbData || localData
-      ? null
-      : await withTimeout(getSkinByName(decodedName).catch(() => null), 2500, null);
-  const data = dbData ?? localData ?? skinportData;
+  const shouldFetchLive = !dbData || isPriceSnapshotStale(dbData.updatedAt);
+  const skinportData = shouldFetchLive
+    ? await withTimeout(getSkinByName(decodedName).catch(() => null), 2500, null)
+    : null;
+  const resolvedData = skinportData ?? dbData ?? localData;
 
-  if (!data) {
+  if (!resolvedData) {
     notFound();
   }
 
-  const historyName = data.name;
+  const historyName = resolvedData.name;
+  const sortedShopPrices = await withTimeout(
+    (async () => {
+      const shopPrices = await getShopPrices(historyName).catch(() => []);
+      if (shopPrices.length > 0) {
+        await recordShopPriceHistory(historyName, shopPrices).catch((error) => {
+          console.error("recordShopPriceHistory sync failed", error);
+        });
+      }
+      return sortShopPrices(shopPrices);
+    })(),
+    4500,
+    [] as ShopPrice[]
+  );
+  const history = await getSkinPriceHistory(historyName, 90).catch(() => ({
+    points: [],
+    currency: "EUR",
+  }));
+  const bestLiveShop =
+    sortedShopPrices.find(
+      (shop): shop is ShopPrice & { price: number } =>
+        typeof shop.price === "number" && Number.isFinite(shop.price)
+    ) ?? null;
 
   if (skinportData) {
     void upsertSkinFromSkinportName(decodedName).catch((error) => {
-      console.error("upsertSkinFromSkinportName background sync failed", error);
+      console.error("live price sync failed", error);
     });
   }
 
-  void recordSkinPriceHistory(historyName).catch((error) => {
-    console.error("recordSkinPriceHistory background sync failed", error);
-  });
-
-  const imageUrl = getSkinImageUrl(data.name);
+  const imageUrl = getSkinImageUrl(resolvedData.name);
   const sourceBadge = skinportData
-    ? "Skinport live"
+    ? dbData
+      ? "Skinport refresh"
+      : "Skinport live"
     : dbData
       ? "DB cache"
       : "Offline katalog";
-  const marketUrl = data.marketPage || data.itemPage || null;
+  const marketUrl = resolvedData.marketPage || resolvedData.itemPage || null;
   const isSkinport = marketUrl?.includes("skinport.com") ?? false;
-  const primaryMarketLabel = isSkinport ? "Otevrit Skinport market" : "Otevrit market";
-  const secondaryMarketLabel = isSkinport ? "Detail na Skinportu" : "Detail na marketu";
+  const headlinePrice = bestLiveShop?.price ?? resolvedData.price;
+  const headlinePriceLabel = bestLiveShop
+    ? `Nejlevnejsi live (${bestLiveShop.label})`
+    : "Aktualni cena";
+  const cheapestOfferUrl =
+    bestLiveShop?.url ?? resolvedData.marketPage ?? resolvedData.itemPage ?? null;
 
   return (
     <section className="container-max py-8 space-y-8">
@@ -218,108 +150,160 @@ export default async function SkinDetailPage({ params }: PageProps) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-        <div className="card p-6 flex items-center justify-center bg-gradient-to-br from-[color:var(--card)] to-[color:var(--card-solid)]">
-          <img
-            src={imageUrl}
-            alt={data.name}
-            className="max-h-96 w-full object-contain drop-shadow-2xl"
-            loading="lazy"
+        <div className="flex flex-col gap-6">
+          <div className="card p-6 flex items-center justify-center bg-gradient-to-br from-[color:var(--card)] to-[color:var(--card-solid)]">
+            <img
+              src={imageUrl}
+              alt={resolvedData.name}
+              className="max-h-96 w-full object-contain drop-shadow-2xl"
+              loading="lazy"
+            />
+          </div>
+
+          <SkinWearPanel
+            wear={resolvedData.wear}
+            minFloat={resolvedData.minFloat}
+            maxFloat={resolvedData.maxFloat}
           />
         </div>
 
         <div className="card p-6 flex flex-col gap-5">
           <div className="space-y-2">
-            <div className="kicker">{data.weapon}</div>
-            <h1 className="display text-3xl font-semibold leading-tight">{data.skin}</h1>
-            {data.wear && (
-              <div className="text-sm text-[color:var(--muted)]">{data.wear}</div>
+            <div className="kicker">{resolvedData.weapon}</div>
+            <h1 className="display text-3xl font-semibold leading-tight">{resolvedData.skin}</h1>
+            {resolvedData.wear && (
+              <div className="text-sm text-[color:var(--muted)]">{resolvedData.wear}</div>
             )}
-            <div className="text-xs text-[color:var(--muted)]">{data.name}</div>
-            {data.rarity && (
+            <div className="text-xs text-[color:var(--muted)]">{resolvedData.name}</div>
+            {resolvedData.rarity && (
               <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-3 py-1 text-xs font-semibold text-[color:var(--fg)]">
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
-                    rarityBgClass[data.rarity as keyof typeof rarityBgClass] ?? "bg-white/60"
+                    rarityBgClass[
+                      resolvedData.rarity as keyof typeof rarityBgClass
+                    ] ?? "bg-white/60"
                   }`}
                 />
-                {data.rarity}
+                {resolvedData.rarity}
               </div>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
-              <div className="text-[color:var(--muted)]">Aktualni cena</div>
+              <div className="text-[color:var(--muted)]">{headlinePriceLabel}</div>
               <div className="text-2xl font-semibold">
-                {data.price ? currency.format(data.price) : "-"}
+                {formatMoney(headlinePrice)}
               </div>
               <div className="text-xs text-[color:var(--muted)]">
-                Rozpeti: {data.minPrice ? currency.format(data.minPrice) : "-"} -{" "}
-                {data.maxPrice ? currency.format(data.maxPrice) : "-"}
+                {bestLiveShop
+                  ? `Snapshot marketu: ${bestLiveShop.label}`
+                  : `Skinport rozpeti: ${formatMoney(resolvedData.minPrice)} - ${formatMoney(
+                      resolvedData.maxPrice
+                    )}`}
               </div>
             </div>
             <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
               <div className="text-[color:var(--muted)]">Median 7d</div>
               <div className="text-xl font-semibold">
-                {data.median7d ? currency.format(data.median7d) : "-"}
+                {formatMoney(resolvedData.median7d)}
               </div>
               <div className="text-xs text-[color:var(--muted)]">
-                Suggested: {data.suggestedPrice ? currency.format(data.suggestedPrice) : "-"}
+                Suggested: {formatMoney(resolvedData.suggestedPrice)}
               </div>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {data.marketPage && (
+            <WishlistButton marketHashName={resolvedData.name} />
+            {cheapestOfferUrl && (
               <a
-                href={data.marketPage}
+                href={cheapestOfferUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-primary"
               >
-                {primaryMarketLabel}
+                Otevrit nejlevnejsi nabidku
               </a>
             )}
-            {data.itemPage && (
+            <SmoothScrollButton targetId="shop-offers" className="btn-ghost">
+              Zobrazit dalsi nabidky
+            </SmoothScrollButton>
+            {resolvedData.itemPage && (
               <a
-                href={data.itemPage}
+                href={resolvedData.itemPage}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-ghost"
               >
-                {secondaryMarketLabel}
+                {isSkinport ? "Detail na Skinportu" : "Detail na marketu"}
               </a>
             )}
           </div>
         </div>
       </div>
 
-      <Suspense fallback={<PriceHistoryFallback />}>
-        <PriceHistorySection historyName={historyName} />
-      </Suspense>
+      <div className="card p-6">
+        <PriceHistoryChart points={history.points} currency={history.currency} />
+      </div>
 
-      <Suspense fallback={<ShopPricesFallback />}>
-        <ShopPricesSection historyName={historyName} />
-      </Suspense>
+      <div id="shop-offers" className="card scroll-mt-24 p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="kicker">Porovnani shopu</div>
+            <h3 className="text-xl font-semibold">Ceny na trzistich</h3>
+          </div>
+          <span className="text-xs text-[color:var(--muted)]">live / EUR</span>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="card p-4 text-sm">
-          <div className="text-[color:var(--muted)]">Objem 7d</div>
-          <div className="text-lg font-semibold">{formatNumber(data.volume7d)}</div>
-        </div>
-        <div className="card p-4 text-sm">
-          <div className="text-[color:var(--muted)]">Skladem</div>
-          <div className="text-lg font-semibold">{formatNumber(data.quantity)}</div>
-          <div className="text-xs text-[color:var(--muted)]">
-            Mean cena: {data.meanPrice ? currency.format(data.meanPrice) : "-"}
+        {!sortedShopPrices.length && (
+          <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-6 text-sm text-[color:var(--muted)]">
+            Ceny se nepodarilo nacist.
           </div>
-        </div>
-        <div className="card p-4 text-sm">
-          <div className="text-[color:var(--muted)]">Median Skinport</div>
-          <div className="text-lg font-semibold">
-            {data.medianPrice ? currency.format(data.medianPrice) : "-"}
+        )}
+
+        {!!sortedShopPrices.length && (
+          <div className="grid gap-3 md:grid-cols-3">
+            {sortedShopPrices.map((shop) => (
+              <div
+                key={shop.id}
+                className={`rounded-xl border bg-[color:var(--card)] p-4 text-sm ${
+                  bestLiveShop?.id === shop.id
+                    ? "border-[color:var(--accent-2)]"
+                    : "border-[color:var(--border)]"
+                }`}
+              >
+                <div className="font-semibold">{shop.label}</div>
+                <div className="text-lg font-semibold">
+                  {formatShopMoney(shop.price, shop.currency)}
+                </div>
+                {shop.originalPrice !== null &&
+                  shop.originalPrice !== undefined &&
+                  shop.originalCurrency &&
+                  shop.originalCurrency !== shop.currency && (
+                    <div className="text-xs text-[color:var(--muted)]">
+                      puvodne {formatShopMoney(shop.originalPrice, shop.originalCurrency)}
+                    </div>
+                  )}
+                {shop.note && (
+                  <div className="text-xs text-[color:var(--muted)]">
+                    {shop.note}
+                  </div>
+                )}
+                {shop.url && (
+                  <a
+                    href={shop.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-block text-xs text-[color:var(--accent-2)] hover:underline"
+                  >
+                    Otevrit shop
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { recordPriceHistory, syncSkinDatabase } from "@/app/lib/skin-database";
+import { processWishlistPriceChanges } from "@/app/lib/wishlist-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,19 @@ export async function POST() {
 
   try {
     const syncResult = await syncSkinDatabase();
+    const notificationResult = await processWishlistPriceChanges(
+      syncResult.priceChanges
+    );
     const historyResult = await recordPriceHistory();
+    const { priceChanges, ...syncSummary } = syncResult;
     return NextResponse.json(
       {
         message: "Skin sync + price history done.",
-        sync: syncResult,
+        sync: {
+          ...syncSummary,
+          priceChanges: priceChanges.length,
+        },
+        notifications: notificationResult,
         history: historyResult,
       },
       { status: 200 }

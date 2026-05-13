@@ -45,6 +45,12 @@ body {
   height: 100%;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   font-family: var(--font-sans), "Inter", "Segoe UI", sans-serif;
   background:
@@ -184,5 +190,10 @@ a {
 
 .animate-fade-slide {
   animation: fadeSlide 0.2s ease-out forwards;
+}
+
+.tradeup-select option {
+  color: #0f172a;
+  background-color: #ffffff;
 }
 

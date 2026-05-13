@@ -11,14 +11,19 @@ type PriceEntry = {
   price: number | null;
   currency: string;
   source: string;
+  updatedAt: string | null;
+  stale: boolean;
 };
 
 type PairingStats = {
   total: number;
-  matchedDb: number;
+  matchedDbFresh: number;
+  matchedDbStaleFallback: number;
   matchedSkinport: number;
   missing: number;
 };
+
+const DB_PRICE_TTL_MS = 1000 * 60 * 30;
 
 const priceFromItem = (item?: SkinportItem | null) => {
   if (!item) return null;
@@ -37,10 +42,22 @@ const buildLookupKey = (marketHashName: string) => {
 
 const emptyStats = (): PairingStats => ({
   total: 0,
-  matchedDb: 0,
+  matchedDbFresh: 0,
+  matchedDbStaleFallback: 0,
   matchedSkinport: 0,
   missing: 0,
 });
+
+const isDbPriceFresh = (updatedAt: Date | null | undefined) => {
+  if (!(updatedAt instanceof Date)) return false;
+  return Date.now() - updatedAt.getTime() < DB_PRICE_TTL_MS;
+};
+
+const unixToIso = (value: number | null | undefined) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const ms = value > 1_000_000_000_000 ? value : value * 1000;
+  return new Date(ms).toISOString();
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,10 +85,16 @@ export async function POST(req: NextRequest) {
 
     const priceMap: Record<string, PriceEntry> = {};
     const found = new Set<string>();
+    const staleDbRows = new Map<string, (typeof dbRows)[number]>();
 
     const dbRows = await prisma.skin.findMany({
       where: { marketHashName: { in: unique } },
-      select: { marketHashName: true, price: true, currency: true },
+      select: {
+        marketHashName: true,
+        price: true,
+        currency: true,
+        updatedAt: true,
+      },
     });
 
     const dbByLower = new Map<string, (typeof dbRows)[number]>();
@@ -82,13 +105,19 @@ export async function POST(req: NextRequest) {
     for (const name of unique) {
       const row = dbByLower.get(name.toLowerCase());
       if (!row) continue;
-      priceMap[name] = {
-        price: row.price ?? null,
-        currency: row.currency ?? "EUR",
-        source: "db",
-      };
-      found.add(name);
-      stats.matchedDb += 1;
+      if (isDbPriceFresh(row.updatedAt)) {
+        priceMap[name] = {
+          price: row.price ?? null,
+          currency: row.currency ?? "EUR",
+          source: "db",
+          updatedAt: row.updatedAt?.toISOString() ?? null,
+          stale: false,
+        };
+        found.add(name);
+        stats.matchedDbFresh += 1;
+      } else {
+        staleDbRows.set(name.toLowerCase(), row);
+      }
     }
 
     let missing = unique.filter((name) => !found.has(name));
@@ -104,7 +133,12 @@ export async function POST(req: NextRequest) {
       if (missingSkins.length) {
         const dbCandidates = await prisma.skin.findMany({
           where: { skin: { in: missingSkins } },
-          select: { marketHashName: true, price: true, currency: true },
+          select: {
+            marketHashName: true,
+            price: true,
+            currency: true,
+            updatedAt: true,
+          },
         });
 
         const dbByLookup = new Map<string, (typeof dbCandidates)[number]>();
@@ -118,13 +152,19 @@ export async function POST(req: NextRequest) {
         for (const name of missing) {
           const row = dbByLookup.get(buildLookupKey(name));
           if (!row) continue;
-          priceMap[name] = {
-            price: row.price ?? null,
-            currency: row.currency ?? "EUR",
-            source: "db-normalized",
-          };
-          found.add(name);
-          stats.matchedDb += 1;
+          if (isDbPriceFresh(row.updatedAt)) {
+            priceMap[name] = {
+              price: row.price ?? null,
+              currency: row.currency ?? "EUR",
+              source: "db-normalized",
+              updatedAt: row.updatedAt?.toISOString() ?? null,
+              stale: false,
+            };
+            found.add(name);
+            stats.matchedDbFresh += 1;
+          } else {
+            staleDbRows.set(name.toLowerCase(), row);
+          }
         }
       }
     }
@@ -146,10 +186,25 @@ export async function POST(req: NextRequest) {
         const item = exact ?? skinportByLookup.get(buildLookupKey(name)) ?? null;
 
         if (!item) {
+          const staleRow = staleDbRows.get(name.toLowerCase()) ?? null;
+          if (staleRow) {
+            priceMap[name] = {
+              price: staleRow.price ?? null,
+              currency: staleRow.currency ?? "EUR",
+              source: "db-stale",
+              updatedAt: staleRow.updatedAt?.toISOString() ?? null,
+              stale: true,
+            };
+            stats.matchedDbStaleFallback += 1;
+            continue;
+          }
+
           priceMap[name] = {
             price: null,
             currency: "EUR",
             source: "missing",
+            updatedAt: null,
+            stale: false,
           };
           stats.missing += 1;
           continue;
@@ -159,6 +214,8 @@ export async function POST(req: NextRequest) {
           price: priceFromItem(item),
           currency: item.currency ?? "EUR",
           source: exact ? "skinport" : "skinport-normalized",
+          updatedAt: unixToIso(item.updated_at),
+          stale: false,
         };
         stats.matchedSkinport += 1;
       }

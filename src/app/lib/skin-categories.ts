@@ -389,6 +389,15 @@ export function isWeaponInSkinCategory(
   const haystack = normalizeText(haystackRaw);
   if (!haystack) return false;
 
-  if (category === "knife" && /(?:\u2605)/.test(haystackRaw)) return true;
+  if (category === "knife" && /(?:\u2605)/.test(haystackRaw)) {
+    const glovesOption = optionByKey.get("gloves");
+    if (
+      glovesOption &&
+      normalizedIncludesAny(haystack, glovesOption.weaponTerms)
+    ) {
+      return false;
+    }
+    return true;
+  }
   return normalizedIncludesAny(haystack, option.weaponTerms);
 }

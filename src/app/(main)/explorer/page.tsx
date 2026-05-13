@@ -9,7 +9,6 @@ import {
   getSkinCategoryLabel,
   getSkinWeaponLabel,
   resolveSkinCategory,
-  resolveSkinWeaponKey,
   type SkinCategory,
   type SkinCategoryOption,
   type SkinWeaponOption,

@@ -3,6 +3,8 @@ import { getTrendingSkins } from "@/app/lib/skinport";
 import { getTrendingSkinsFromDb } from "@/app/lib/skin-database";
 import SkinMarketCard from "@/components/SkinMarketCard";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   let data:
     | {
@@ -119,9 +121,9 @@ export default async function HomePage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="display text-2xl">Trendy skiny (dalsi 30 podle objemu 7d)</h2>
-          <a href="/explorer" className="text-sm text-[color:var(--accent-2)] hover:underline">
+          <Link href="/explorer" className="text-sm text-[color:var(--accent-2)] hover:underline">
             Rozsirene hledani
-          </a>
+          </Link>
         </div>
         {data && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">

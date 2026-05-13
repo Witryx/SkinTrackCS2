@@ -48,6 +48,7 @@ type RawSkinMetaEntry = {
   minFloat: number | null;
   maxFloat: number | null;
   imageUrl: string | null;
+  collections: string[];
   containers: string[];
 };
 
@@ -57,6 +58,7 @@ export type SkinMeta = {
   minFloat: number | null;
   maxFloat: number | null;
   imageUrl: string | null;
+  collections: string[];
   containers: string[];
 };
 
@@ -117,7 +119,7 @@ async function loadLocalJson(): Promise<Record<string, RawLegacySkin> | null> {
   try {
     const raw = await readFile(LOCAL_SKINS_PATH, "utf8");
     return JSON.parse(raw) as Record<string, RawLegacySkin>;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -177,6 +179,7 @@ function buildLegacyEntries(
         minFloat: parseFloatValue(value.min_float),
         maxFloat: parseFloatValue(value.max_float),
         imageUrl: value.image_urls?.[0] ?? null,
+        collections: value.containers_found_in ?? [],
         containers: value.containers_found_in ?? [],
       },
     ];
@@ -195,6 +198,7 @@ function buildPrimaryEntries(rawJson: RawByMykelSkin[]): RawSkinMetaEntry[] {
         minFloat: parseFloatValue(value.min_float),
         maxFloat: parseFloatValue(value.max_float),
         imageUrl: value.image ?? null,
+        collections: collectNames(value.collections),
         containers: [
           ...collectNames(value.collections),
           ...collectNames(value.crates),
@@ -215,6 +219,7 @@ function mergeMetaEntry(
     minFloat: incoming.minFloat ?? base.minFloat,
     maxFloat: incoming.maxFloat ?? base.maxFloat,
     imageUrl: incoming.imageUrl ?? base.imageUrl,
+    collections: Array.from(new Set([...base.collections, ...incoming.collections])),
     containers: Array.from(new Set([...base.containers, ...incoming.containers])),
   };
 }
@@ -243,6 +248,7 @@ function buildCache(entries: RawSkinMetaEntry[]) {
       minFloat: value.minFloat,
       maxFloat: value.maxFloat,
       imageUrl: value.imageUrl,
+      collections: value.collections,
       containers: value.containers,
     };
 

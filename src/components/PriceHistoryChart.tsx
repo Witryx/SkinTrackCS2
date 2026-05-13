@@ -89,6 +89,16 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
       }),
     []
   );
+  const dateTimeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("cs-CZ", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    []
+  );
 
   const stats = useMemo(() => {
     if (!filtered.length) {
@@ -119,6 +129,7 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
 
   const hasData = filtered.length > 0;
   const isSinglePoint = filtered.length === 1;
+  const lastPointDate = hasData ? filtered.at(-1)?.date ?? null : null;
   const spanMs =
     filtered.length > 1
       ? toDate(filtered[filtered.length - 1].date).getTime() -
@@ -144,8 +155,14 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="kicker">Graf vyvoje cen</div>
-          <h3 className="text-xl font-semibold">Price history</h3>
+          <div className="kicker">Graf nejlevnejsi ceny</div>
+          <h3 className="text-xl font-semibold">Lowest live market price</h3>
+          {lastPointDate && (
+            <div className="text-xs text-[color:var(--muted)]">
+              Posledni snapshot {dateTimeFormatter.format(toDate(lastPointDate))} /{" "}
+              {filtered.length} bodu
+            </div>
+          )}
         </div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[color:var(--border)] bg-[color:var(--card-solid)] p-1 shadow-sm">
           {periods.map((opt) => {
@@ -170,8 +187,8 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
 
       {!hasData && (
         <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-6 text-sm text-[color:var(--muted)]">
-          Zatim nejsou zadna historicka data. Spust cron endpoint{" "}
-          <span className="font-mono">/api/skins/history</span>.
+          Zatim nejsou zadna historicka data nejlevnejsi live ceny. Graf se
+          zacne plnit po dalsich live updatech marketu.
         </div>
       )}
 

@@ -13,6 +13,7 @@ import {
   lookupSkinMetaFromParsed,
 } from "./skin-meta";
 import type { ShopPrice } from "./shop-prices";
+import type { WishlistPriceChange } from "./wishlist-notifications";
 import {
   isWeaponMatchingFilter,
   isWeaponInSkinCategory,
@@ -21,6 +22,8 @@ import {
 } from "./skin-categories";
 
 const SKINPORT_SHOP_NAME = "Skinport";
+const BEST_MARKET_SHOP_NAME = "Best Market";
+const PRICE_SNAPSHOT_STALE_MS = 1000 * 60 * 30;
 const SHOP_URLS: Record<string, string> = {
   Skinport: "https://skinport.com",
   "Steam Market": "https://steamcommunity.com/market",
@@ -42,6 +45,16 @@ const getFloatRange = (wear?: string | null) => {
   return wearFloatRanges[normalized] ?? null;
 };
 
+export const isPriceSnapshotStale = (
+  updatedAt: Date | string | null | undefined
+) => {
+  if (!updatedAt) return true;
+  const parsed =
+    updatedAt instanceof Date ? updatedAt : new Date(updatedAt);
+  if (Number.isNaN(parsed.getTime())) return true;
+  return Date.now() - parsed.getTime() >= PRICE_SNAPSHOT_STALE_MS;
+};
+
 const priceFromItem = (
   item: SkinportItem,
   history?: SkinportHistoryItem | null
@@ -54,6 +67,16 @@ const priceFromItem = (
     item.suggested_price ??
     null
   );
+};
+
+const didPriceChange = (
+  previousPrice: number | null | undefined,
+  currentPrice: number | null | undefined
+) => {
+  if (typeof previousPrice !== "number" || typeof currentPrice !== "number") {
+    return false;
+  }
+  return Math.abs(previousPrice - currentPrice) >= 0.01;
 };
 
 export type SkinSearchFilters = {
@@ -75,6 +98,10 @@ export type SkinSearchResult = {
   skin: string;
   wear?: string | null;
   rarity: string;
+  collections: string[];
+  primaryCollection: string | null;
+  containers: string[];
+  primaryContainer: string | null;
   minFloat: number | null;
   maxFloat: number | null;
   price: number | null;
@@ -85,6 +112,7 @@ export type SkinSearchResult = {
   quantity: number | null;
   itemPage?: string | null;
   marketPage?: string | null;
+  imageUrl?: string | null;
 };
 
 const shopIdCache = new Map<string, number>();
@@ -111,10 +139,18 @@ async function getSkinportShopId(client: PrismaClient) {
 }
 
 export async function syncSkinDatabase(client: PrismaClient = prisma) {
-  const [itemsMap, history, externalSkins] = await Promise.all([
+  const [itemsMap, history, externalSkins, existingSkins] = await Promise.all([
     getSkinportItems(),
     getSkinportHistory(),
     getSkinMetaMap().catch(() => null),
+    client.skin.findMany({
+      select: {
+        id: true,
+        marketHashName: true,
+        price: true,
+        currency: true,
+      },
+    }),
   ]);
 
   const historyMap = history.reduce<Map<string, SkinportHistoryItem>>(
@@ -126,6 +162,10 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
   );
 
   const items = Object.values(itemsMap);
+  const existingByName = new Map(
+    existingSkins.map((skin) => [skin.marketHashName.toLowerCase(), skin])
+  );
+  const priceChanges: WishlistPriceChange[] = [];
   let upserted = 0;
   for (const item of items) {
     const historyEntry =
@@ -159,7 +199,22 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
       imageUrl,
     };
 
-    const record = await client.skin.upsert({
+    const existing = existingByName.get(item.market_hash_name.toLowerCase());
+    if (
+      existing &&
+      existing.id &&
+      didPriceChange(existing.price, price)
+    ) {
+      priceChanges.push({
+        skinId: existing.id,
+        marketHashName: item.market_hash_name,
+        previousPrice: existing.price as number,
+        currentPrice: price as number,
+        currency: item.currency ?? existing.currency ?? "EUR",
+      });
+    }
+
+    await client.skin.upsert({
       where: { marketHashName: item.market_hash_name },
       update: payload,
       create: payload,
@@ -168,7 +223,7 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
 
   }
 
-  return { total: items.length, upserted };
+  return { total: items.length, upserted, priceChanges };
 }
 
 export async function upsertSkinFromSkinportName(
@@ -350,6 +405,9 @@ export async function searchSkinsDb(
       );
       const resolvedRarity =
         meta?.rarity ?? skin.rarity ?? resolveRarity(skin.price);
+      const collections =
+        meta?.collections?.length ? meta.collections : meta?.containers ?? [];
+      const containers = meta?.containers ?? [];
       return {
         id: skin.id,
         name: skin.marketHashName,
@@ -357,6 +415,10 @@ export async function searchSkinsDb(
         skin: skin.skin,
         wear: skin.wear,
         rarity: resolvedRarity,
+        collections,
+        primaryCollection: collections[0] ?? null,
+        containers,
+        primaryContainer: containers[0] ?? null,
         minFloat: skin.minFloat ?? meta?.minFloat ?? null,
         maxFloat: skin.maxFloat ?? meta?.maxFloat ?? null,
         price: skin.price ?? null,
@@ -367,6 +429,7 @@ export async function searchSkinsDb(
         quantity: skin.quantity ?? null,
         itemPage: skin.itemPage,
         marketPage: skin.marketPage,
+        imageUrl: skin.imageUrl ?? meta?.imageUrl ?? null,
       };
     })
     .filter((item) => {
@@ -452,6 +515,7 @@ export async function getSkinFromDb(
     itemPage: record.itemPage,
     marketPage: record.marketPage,
     currency: record.currency,
+    updatedAt: record.updatedAt.toISOString(),
   };
 }
 
@@ -584,13 +648,14 @@ export async function recordShopPriceHistory(
         )
       )
     );
+    const bestMarketShopId = await getShopId(client, BEST_MARKET_SHOP_NAME, null);
 
     const capturedAt = new Date();
     const recentSince = new Date(capturedAt.getTime() - 1000 * 60 * 10);
     const recentRows = (await model.findMany({
       where: {
         skinId: skin.id,
-        shopId: { in: shopIds },
+        shopId: { in: [...shopIds, bestMarketShopId] },
         capturedAt: { gte: recentSince },
       },
       orderBy: { capturedAt: "desc" },
@@ -625,6 +690,27 @@ export async function recordShopPriceHistory(
       });
     });
 
+    const bestShop = valid.reduce<ShopPrice & { price: number } | null>(
+      (current, shop) => {
+        if (!current) return shop;
+        return shop.price < current.price ? shop : current;
+      },
+      null
+    );
+
+    if (bestShop) {
+      const recentBest = recentByShop.get(bestMarketShopId);
+      if (!recentBest || recentBest.price !== bestShop.price) {
+        data.push({
+          skinId: skin.id,
+          shopId: bestMarketShopId,
+          currency: "EUR",
+          price: bestShop.price,
+          capturedAt,
+        });
+      }
+    }
+
     if (!data.length) return { inserted: 0 };
     const result = await model.createMany({ data });
     return { inserted: result.count };
@@ -637,7 +723,7 @@ export async function recordShopPriceHistory(
 export async function getSkinPriceHistory(
   marketHashName: string,
   days = 90,
-  shopName: string | null = SKINPORT_SHOP_NAME,
+  shopName: string | null = BEST_MARKET_SHOP_NAME,
   client: PrismaClient = prisma
 ) {
   if (!marketHashName) return { points: [], currency: "EUR" };

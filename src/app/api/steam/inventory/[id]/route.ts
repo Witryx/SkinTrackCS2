@@ -42,6 +42,49 @@ type SteamInventoryResponse = {
   error?: string;
 };
 
+type InventoryPayload = {
+  total: number;
+  items: Array<{
+    assetId: string;
+    classId: string;
+    instanceId: string;
+    amount: number;
+    name: string;
+    marketHashName: string;
+    iconUrl: string | null;
+    type: string | null;
+    tradable: number;
+    marketable: number;
+    rarityTag: string | null;
+    collection: string | null;
+    exterior: string | null;
+    floatValue: number | null;
+    inspectLink: string | null;
+    position: number;
+    source: "steam";
+  }>;
+  truncated: boolean;
+  cached?: boolean;
+  stale?: boolean;
+};
+
+class SteamInventoryFetchError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly details: string
+  ) {
+    super(message);
+  }
+}
+
+const INVENTORY_CACHE_TTL_MS = 1000 * 60;
+const INVENTORY_STALE_TTL_MS = 1000 * 60 * 10;
+const inventoryCache = new Map<
+  string,
+  { fetchedAt: number; data: InventoryPayload }
+>();
+
 const parseFloatValue = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim().length) {
@@ -84,9 +127,16 @@ const buildInspectLink = (
   const linkTemplate = action?.link?.trim();
   if (!linkTemplate) return null;
 
-  return linkTemplate
+  const inspectLink = linkTemplate
     .replace(/%assetid%/gi, assetId)
     .replace(/%owner_steamid%/gi, steamId);
+
+  // Steam sometimes returns unresolved templates such as `%propid:6%`.
+  // They are placeholders for values not exposed by this inventory endpoint,
+  // so sending them to a float API only creates failing requests.
+  if (/%[^%\s]+%/.test(inspectLink)) return null;
+
+  return inspectLink;
 };
 
 async function fetchInventoryPage(
@@ -103,7 +153,11 @@ async function fetchInventoryPage(
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Steam inventory failed (${res.status}): ${text}`);
+    throw new SteamInventoryFetchError(
+      `Steam inventory failed (${res.status})`,
+      res.status,
+      text
+    );
   }
   return (await res.json()) as SteamInventoryResponse;
 }
@@ -112,11 +166,16 @@ export async function GET(
   _req: NextRequest,
   context: { params: { id: string } }
 ) {
-  try {
-    const steamId = context.params.id;
+  const steamId = context.params.id;
 
+  try {
     if (!steamId) {
       return NextResponse.json({ error: "Missing SteamID" }, { status: 400 });
+    }
+
+    const cached = inventoryCache.get(steamId);
+    if (cached && Date.now() - cached.fetchedAt < INVENTORY_CACHE_TTL_MS) {
+      return NextResponse.json({ ...cached.data, cached: true });
     }
 
     let page = await fetchInventoryPage(steamId);
@@ -175,16 +234,40 @@ export async function GET(
       };
     });
 
-    return NextResponse.json({
+    const payload: InventoryPayload = {
       total: page.total_inventory_count ?? items.length,
       items,
       truncated: guard >= 5,
-    });
+    };
+
+    inventoryCache.set(steamId, { fetchedAt: Date.now(), data: payload });
+
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("Steam inventory error:", error);
+    const cached = steamId ? inventoryCache.get(steamId) : null;
+    if (cached && Date.now() - cached.fetchedAt < INVENTORY_STALE_TTL_MS) {
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+        stale: true,
+      });
+    }
+
+    const status =
+      error instanceof SteamInventoryFetchError ? error.status : 500;
     return NextResponse.json(
-      { error: "Steam inventory error", details: String(error) },
-      { status: 500 }
+      {
+        error:
+          status === 429
+            ? "Steam dočasně omezuje požadavky na inventář. Zkus refresh za chvíli."
+            : "Steam inventory error",
+        details:
+          error instanceof SteamInventoryFetchError
+            ? error.details
+            : String(error),
+      },
+      { status }
     );
   }
 }

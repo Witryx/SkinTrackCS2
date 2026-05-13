@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const REQUEST_TIMEOUT_MS = 7000;
-const CSFLOAT_INSPECT_API = "https://api.csfloat.com/";
+const CSFLOAT_INSPECT_APIS = [
+  process.env.CSFLOAT_INSPECT_API,
+  "https://api.csgofloat.com/",
+].filter((url): url is string => Boolean(url));
 
 type InspectPayload = {
   iteminfo?: {
@@ -13,6 +16,20 @@ type InspectPayload = {
   floatvalue?: number | string | null;
   float_value?: number | string | null;
 };
+
+type LookupResult =
+  | {
+      ok: true;
+      payload: InspectPayload | null;
+      endpoint: string;
+    }
+  | {
+      ok: false;
+      error: string;
+      details?: string;
+      status?: number;
+      endpoint?: string;
+    };
 
 const parseNumber = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -36,6 +53,65 @@ const fetchWithTimeout = async (
   }
 };
 
+const lookupInspectPayload = async (
+  inspectLink: string
+): Promise<LookupResult> => {
+  let lastError: LookupResult = {
+    ok: false,
+    error: "Inspect float service unavailable.",
+  };
+
+  for (const endpoint of CSFLOAT_INSPECT_APIS) {
+    const url = `${endpoint}?url=${encodeURIComponent(inspectLink)}`;
+    try {
+      const res = await fetchWithTimeout(url, {
+        headers: {
+          Origin: "https://csfloat.com",
+          "User-Agent": "Mozilla/5.0",
+        },
+        cache: "no-store",
+      });
+
+      const raw = await res.text().catch(() => "");
+      if (!res.ok) {
+        lastError = {
+          ok: false,
+          error: "Inspect float lookup failed.",
+          details: raw.slice(0, 180),
+          status: res.status,
+          endpoint,
+        };
+        continue;
+      }
+
+      try {
+        return {
+          ok: true,
+          payload: raw ? (JSON.parse(raw) as InspectPayload) : null,
+          endpoint,
+        };
+      } catch {
+        lastError = {
+          ok: false,
+          error: "Invalid inspect response.",
+          endpoint,
+        };
+      }
+    } catch (error) {
+      lastError = {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Inspect float service unavailable.",
+        endpoint,
+      };
+    }
+  }
+
+  return lastError;
+};
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as
@@ -51,54 +127,57 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const url = `${CSFLOAT_INSPECT_API}?url=${encodeURIComponent(inspectLink)}`;
-    const res = await fetchWithTimeout(url, {
-      headers: {
-        // CSFloat blocks requests without a browser-like origin.
-        Origin: "https://csfloat.com",
-        "User-Agent": "Mozilla/5.0",
-      },
-      cache: "no-store",
-    });
-
-    const raw = await res.text().catch(() => "");
-    if (!res.ok) {
+    if (/%[^%\s]+%/.test(inspectLink)) {
       return NextResponse.json(
-        { error: "Inspect float lookup failed.", details: raw.slice(0, 180) },
-        { status: res.status }
+        {
+          floatValue: null,
+          source: "inspect-link-template",
+          error: "Inspect link contains unresolved Steam placeholders.",
+        },
+        { status: 200 }
       );
     }
 
-    let payload: InspectPayload | null = null;
-    try {
-      payload = raw ? (JSON.parse(raw) as InspectPayload) : null;
-    } catch {
-      payload = null;
+    const lookup = await lookupInspectPayload(inspectLink);
+    if (!lookup.ok) {
+      return NextResponse.json(
+        {
+          floatValue: null,
+          source: lookup.endpoint ?? "inspect-service",
+          error: lookup.error,
+          details: lookup.details,
+        },
+        { status: 200 }
+      );
     }
 
-    if (!payload) {
+    if (!lookup.payload) {
       return NextResponse.json(
-        { error: "Invalid inspect response." },
-        { status: 502 }
+        {
+          floatValue: null,
+          source: lookup.endpoint,
+          error: "Invalid inspect response.",
+        },
+        { status: 200 }
       );
     }
 
     const floatValue = parseNumber(
-      payload.iteminfo?.floatvalue ??
-        payload.iteminfo?.float_value ??
-        payload.floatvalue ??
-        payload.float_value
+      lookup.payload.iteminfo?.floatvalue ??
+        lookup.payload.iteminfo?.float_value ??
+        lookup.payload.floatvalue ??
+        lookup.payload.float_value
     );
 
     return NextResponse.json({
       floatValue,
-      source: "csfloat-inspect",
+      source: lookup.endpoint,
     });
   } catch (error) {
     console.error("Inspect float lookup failed", error);
     return NextResponse.json(
-      { error: "Inspect float lookup failed." },
-      { status: 500 }
+      { floatValue: null, source: "inspect-service", error: "Inspect float lookup failed." },
+      { status: 200 }
     );
   }
 }

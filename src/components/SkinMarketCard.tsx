@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSkinDetailPath, getSkinImageUrl } from "@/app/lib/skin-images";
 import { Rarity, rarityTextClass } from "@/app/lib/rarity";
+import WishlistButton from "./WishlistButton";
 
 type CardDensity = "regular" | "compact";
 
@@ -139,26 +140,29 @@ export default function SkinMarketCard({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(150%_95%_at_50%_0%,rgba(33,131,255,0.2),rgba(2,9,24,0)_62%)]" />
       <div className="relative z-10 flex h-full flex-col">
         <div className={join(compact ? "px-3.5 pt-3.5 pb-3.5" : "px-4 pt-4 pb-4")}>
-          <div className="flex items-center justify-end gap-1.5">
-            {st && (
+          <div className="flex items-center justify-between gap-2">
+            <WishlistButton marketHashName={name} compact={compact} />
+            <div className="flex items-center justify-end gap-1.5">
+              {st && (
+                <span
+                  className={join(
+                    "rounded-lg border border-amber-300/45 bg-amber-500/20 px-2 text-[10px] font-semibold uppercase text-amber-100",
+                    compact ? "py-0.5" : "py-1"
+                  )}
+                >
+                  ST
+                </span>
+              )}
               <span
                 className={join(
-                  "rounded-lg border border-amber-300/45 bg-amber-500/20 px-2 text-[10px] font-semibold uppercase text-amber-100",
-                  compact ? "py-0.5" : "py-1"
+                  "rounded-lg px-2 text-[11px] font-semibold uppercase",
+                  compact ? "py-0.5" : "py-1",
+                  wearClass
                 )}
               >
-                ST
+                {wearShort}
               </span>
-            )}
-            <span
-              className={join(
-                "rounded-lg px-2 text-[11px] font-semibold uppercase",
-                compact ? "py-0.5" : "py-1",
-                wearClass
-              )}
-            >
-              {wearShort}
-            </span>
+            </div>
           </div>
 
           <div
