@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getSiteUrl } from "@/app/lib/site-url";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 const openidEndpoint = "https://steamcommunity.com/openid/login";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const siteUrl = getSiteUrl(req);
   const params = new URLSearchParams({
     "openid.ns": "http://specs.openid.net/auth/2.0",
     "openid.mode": "checkid_setup",

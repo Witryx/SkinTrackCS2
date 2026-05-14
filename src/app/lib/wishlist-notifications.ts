@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 import { calculateChangePercent } from "./price-alerts";
 import { sendPriceAlertEmail } from "./email";
 import { getSkinDetailPath } from "./skin-images";
+import { getSiteUrl } from "./site-url";
 
 export type WishlistPriceChange = {
   skinId: number;
@@ -44,7 +45,7 @@ export async function processWishlistPriceChanges(
     where: { skinId: { in: [...changesBySkinId.keys()] } },
     include: { user: true, skin: true },
   });
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteUrl = getSiteUrl();
 
   let notificationsCreated = 0;
   let emailsSent = 0;
