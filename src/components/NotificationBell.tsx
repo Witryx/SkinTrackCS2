@@ -48,6 +48,7 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [removingIds, setRemovingIds] = useState<Set<number>>(() => new Set());
   const rootRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
@@ -109,6 +110,38 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
     }
   };
 
+  const removeNotification = async (item: NotificationItem) => {
+    if (!steamId || removingIds.has(item.id)) return;
+
+    setRemovingIds((current) => new Set(current).add(item.id));
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ steamId, id: item.id }),
+      });
+      if (!response.ok) throw new Error("Notification delete failed");
+
+      const body = await response.json();
+      if (Number(body.deleted) > 0) {
+        setItems((current) =>
+          current.filter((notification) => notification.id !== item.id)
+        );
+        if (!item.readAt) {
+          setUnreadCount((current) => Math.max(0, current - 1));
+        }
+      }
+    } catch (error) {
+      console.error("Notification delete failed", error);
+    } finally {
+      setRemovingIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
+    }
+  };
+
   if (!steamId) return null;
 
   return (
@@ -167,36 +200,65 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
             )}
 
             {items.map((item) => (
-              <Link
+              <div
                 key={item.id}
-                href={getSkinDetailPath(item.skin.name)}
-                onClick={() => setOpen(false)}
-                className="block border-b border-[color:var(--border)] px-4 py-3 transition last:border-b-0 hover:bg-[color:var(--card)]"
+                className="flex items-stretch border-b border-[color:var(--border)] transition last:border-b-0 hover:bg-[color:var(--card)]"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      {!item.readAt && (
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-[color:var(--accent-2)]" />
-                      )}
-                      <div className="truncate text-sm font-semibold">
-                        {item.skin.weapon} | {item.skin.skin}
+                <Link
+                  href={getSkinDetailPath(item.skin.name)}
+                  onClick={() => setOpen(false)}
+                  className="min-w-0 flex-1 px-4 py-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {!item.readAt && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-[color:var(--accent-2)]" />
+                        )}
+                        <div className="truncate text-sm font-semibold">
+                          {item.skin.weapon} | {item.skin.skin}
+                        </div>
+                      </div>
+                      <div className="mt-1 text-xs text-[color:var(--muted)]">
+                        {item.message}
+                      </div>
+                      <div className="mt-2 text-xs text-[color:var(--muted)]">
+                        {formatMoney(item.previousPrice, item.currency)}
+                        {" -> "}
+                        {formatMoney(item.currentPrice, item.currency)}
                       </div>
                     </div>
-                    <div className="mt-1 text-xs text-[color:var(--muted)]">
-                      {item.message}
-                    </div>
-                    <div className="mt-2 text-xs text-[color:var(--muted)]">
-                      {formatMoney(item.previousPrice, item.currency)}
-                      {" -> "}
-                      {formatMoney(item.currentPrice, item.currency)}
-                    </div>
+                    <span className="shrink-0 text-[11px] text-[color:var(--muted)]">
+                      {formatTime(item.createdAt)}
+                    </span>
                   </div>
-                  <span className="shrink-0 text-[11px] text-[color:var(--muted)]">
-                    {formatTime(item.createdAt)}
-                  </span>
+                </Link>
+                <div className="flex items-start pr-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => removeNotification(item)}
+                    disabled={removingIds.has(item.id)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-[color:var(--muted)] transition hover:border-[color:var(--border)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--danger)] disabled:opacity-45"
+                    title="Smazat oznameni"
+                    aria-label="Smazat oznameni"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4h8v2" />
+                      <path d="M19 6l-1 14H6L5 6" />
+                      <path d="M10 11v5" />
+                      <path d="M14 11v5" />
+                    </svg>
+                  </button>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </div>

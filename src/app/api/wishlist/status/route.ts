@@ -37,11 +37,12 @@ export async function GET(req: NextRequest) {
         skinId: skin.id,
       },
     },
-    select: { emailAlertsEnabled: true },
+    select: { alertsEnabled: true, emailAlertsEnabled: true },
   });
 
   return NextResponse.json({
     wished: Boolean(favorite),
+    alertsEnabled: favorite?.alertsEnabled ?? false,
     emailAlertsEnabled: favorite?.emailAlertsEnabled ?? false,
   });
 }

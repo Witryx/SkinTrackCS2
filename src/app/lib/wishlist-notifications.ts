@@ -1,9 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { prisma } from "./prisma";
-import {
-  calculateChangePercent,
-  getSharpPriceChangeThresholdPercent,
-} from "./price-alerts";
+import { calculateChangePercent } from "./price-alerts";
 import { sendPriceAlertEmail } from "./email";
 import { getSkinDetailPath } from "./skin-images";
 
@@ -47,7 +44,6 @@ export async function processWishlistPriceChanges(
     where: { skinId: { in: [...changesBySkinId.keys()] } },
     include: { user: true, skin: true },
   });
-  const thresholdPercent = getSharpPriceChangeThresholdPercent();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
   let notificationsCreated = 0;
@@ -58,10 +54,6 @@ export async function processWishlistPriceChanges(
   for (const favorite of favorites) {
     const change = changesBySkinId.get(favorite.skinId);
     if (!change) continue;
-    if (!favorite.emailAlertsEnabled) {
-      emailsSkipped += 1;
-      continue;
-    }
 
     const changePercent = calculateChangePercent(
       change.previousPrice,
@@ -72,27 +64,29 @@ export async function processWishlistPriceChanges(
     const title = `Cena ${directionLabel}: ${favorite.skin.marketHashName}`;
     const message = `Cena se zmenila o ${formatPercent(changePercent)}.`;
 
-    const notification = await client.notification.create({
-      data: {
-        userId: favorite.userId,
-        skinId: favorite.skinId,
-        type: "PRICE_CHANGE",
-        title,
-        message,
-        previousPrice: change.previousPrice,
-        currentPrice: change.currentPrice,
-        changePercent,
-        direction,
-        currency: change.currency || favorite.skin.currency || "EUR",
-      },
-    });
-    notificationsCreated += 1;
+    const notification = favorite.alertsEnabled
+      ? await client.notification.create({
+          data: {
+            userId: favorite.userId,
+            skinId: favorite.skinId,
+            type: "PRICE_CHANGE",
+            title,
+            message,
+            previousPrice: change.previousPrice,
+            currentPrice: change.currentPrice,
+            changePercent,
+            direction,
+            currency: change.currency || favorite.skin.currency || "EUR",
+          },
+        })
+      : null;
+    if (notification) notificationsCreated += 1;
 
     const steamAccountEmail = favorite.user.email;
     const shouldSendEmail =
+      favorite.emailAlertsEnabled &&
       Boolean(steamAccountEmail) &&
-      typeof changePercent === "number" &&
-      Math.abs(changePercent) >= thresholdPercent;
+      typeof changePercent === "number";
 
     if (!shouldSendEmail || !steamAccountEmail) {
       emailsSkipped += 1;
@@ -115,11 +109,8 @@ export async function processWishlistPriceChanges(
       });
 
       if (result.sent) {
-        await Promise.all([
-          client.notification.update({
-            where: { id: notification.id },
-            data: { emailedAt: new Date() },
-          }),
+        const emailedAt = new Date();
+        const updates: Array<Promise<unknown>> = [
           client.favorite.update({
             where: {
               userId_skinId: {
@@ -127,9 +118,20 @@ export async function processWishlistPriceChanges(
                 skinId: favorite.skinId,
               },
             },
-            data: { lastEmailAlertAt: new Date() },
+            data: { lastEmailAlertAt: emailedAt },
           }),
-        ]);
+        ];
+
+        if (notification) {
+          updates.push(
+            client.notification.update({
+              where: { id: notification.id },
+              data: { emailedAt },
+            })
+          );
+        }
+
+        await Promise.all(updates);
         emailsSent += 1;
       } else {
         emailsSkipped += 1;

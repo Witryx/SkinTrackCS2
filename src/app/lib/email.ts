@@ -51,7 +51,7 @@ export async function sendPriceAlertEmail(input: PriceAlertEmailInput) {
 
   const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.5;color:#0f172a">
-      <h1 style="font-size:20px;margin:0 0 12px">Vyrazna zmena ceny</h1>
+      <h1 style="font-size:20px;margin:0 0 12px">Zmena ceny</h1>
       <p><strong>${safeName}</strong> ${direction} o <strong>${absPercent}%</strong>.</p>
       <p>Predchozi cena: <strong>${previous}</strong><br />Aktualni cena: <strong>${current}</strong></p>
       <p><a href="${safeDetailUrl}">Otevrit detail ve SkinTracku</a></p>

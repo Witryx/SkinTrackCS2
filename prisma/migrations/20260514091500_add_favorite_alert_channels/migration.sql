@@ -1,0 +1,2 @@
+ALTER TABLE `Favorite`
+  ADD COLUMN `alertsEnabled` BOOLEAN NOT NULL DEFAULT true;

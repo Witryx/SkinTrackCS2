@@ -25,26 +25,19 @@ type WishlistSkin = {
 
 type WishlistItem = {
   addedAt: string;
+  alertsEnabled: boolean;
   emailAlertsEnabled: boolean;
   skin: WishlistSkin;
 };
 
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("cs-CZ", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+type AlertSetting = "alertsEnabled" | "emailAlertsEnabled";
 
 export default function WishlistPage() {
   const [steamId, setSteamId] = useState<string | null>(null);
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [email, setEmail] = useState("");
-  const [thresholdPercent, setThresholdPercent] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [updatingAlertSkinId, setUpdatingAlertSkinId] = useState<number | null>(null);
+  const [updatingAlertKey, setUpdatingAlertKey] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -94,7 +87,6 @@ export default function WishlistPage() {
       const nextItems = Array.isArray(body.items) ? body.items : [];
       setItems(nextItems);
       setEmail(body.email ?? "");
-      setThresholdPercent(Number(body.sharpThresholdPercent) || 10);
     } catch (error) {
       console.error("Wishlist fetch failed", error);
       setStatus("Wishlist se nepodarilo nacist.");
@@ -127,19 +119,25 @@ export default function WishlistPage() {
     }
   };
 
-  const toggleEmailAlerts = async (
+  const toggleAlertSetting = async (
     skinId: number,
+    setting: AlertSetting,
     enabled: boolean
   ) => {
     if (!steamId) return;
+    if (setting === "emailAlertsEnabled" && enabled && !email) {
+      setStatus("E-mail u Steam uctu chybi, proto nejde zapnout e-mail alert.");
+      return;
+    }
 
     const previousItems = items;
-    setUpdatingAlertSkinId(skinId);
+    const updateKey = `${skinId}:${setting}`;
+    setUpdatingAlertKey(updateKey);
     setStatus(null);
     setItems((current) =>
       current.map((item) =>
         item.skin.id === skinId
-          ? { ...item, emailAlertsEnabled: enabled }
+          ? { ...item, [setting]: enabled }
           : item
       )
     );
@@ -151,7 +149,7 @@ export default function WishlistPage() {
         body: JSON.stringify({
           steamId,
           skinId,
-          emailAlertsEnabled: enabled,
+          [setting]: enabled,
         }),
       });
       const body = await response.json().catch(() => null);
@@ -163,7 +161,11 @@ export default function WishlistPage() {
         setItems((current) =>
           current.map((item) =>
             item.skin.id === skinId
-              ? { ...item, emailAlertsEnabled: body.item.emailAlertsEnabled }
+              ? {
+                  ...item,
+                  alertsEnabled: body.item.alertsEnabled,
+                  emailAlertsEnabled: body.item.emailAlertsEnabled,
+                }
               : item
           )
         );
@@ -173,8 +175,46 @@ export default function WishlistPage() {
       setItems(previousItems);
       setStatus("Alert se nepodarilo ulozit.");
     } finally {
-      setUpdatingAlertSkinId(null);
+      setUpdatingAlertKey(null);
     }
+  };
+
+  const renderAlertToggle = (
+    item: WishlistItem,
+    setting: AlertSetting,
+    label: string
+  ) => {
+    const enabled = item[setting];
+    const updateKey = `${item.skin.id}:${setting}`;
+    const disabled = updatingAlertKey === updateKey;
+
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        disabled={disabled}
+        onClick={() => toggleAlertSetting(item.skin.id, setting, !enabled)}
+        className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-2.5 py-1 transition hover:border-[color:var(--accent-2)] disabled:cursor-wait disabled:opacity-60"
+      >
+        <span
+          className={
+            enabled
+              ? "relative inline-flex h-5 w-9 items-center rounded-full bg-emerald-500"
+              : "relative inline-flex h-5 w-9 items-center rounded-full bg-slate-600"
+          }
+        >
+          <span
+            className={
+              enabled
+                ? "ml-4 h-4 w-4 rounded-full bg-white transition"
+                : "ml-0.5 h-4 w-4 rounded-full bg-white transition"
+            }
+          />
+        </span>
+        <span>{label}</span>
+      </button>
+    );
   };
 
   if (!steamId) {
@@ -206,7 +246,7 @@ export default function WishlistPage() {
           <div className="kicker">Wishlist</div>
           <h1 className="display text-4xl">Sledovane skiny</h1>
           <p className="mt-2 text-sm text-[color:var(--muted)]">
-            Cenove alerty muzes zapnout nebo vypnout u kazdeho skinu. E-mail odchazi pri prudke zmene od {thresholdPercent} %.
+            U kazdeho skinu muzes zvlast zapnout oznameni do zvonecku a e-mail.
           </p>
         </div>
         <div className="stat-tile min-w-32 text-center text-sm text-[color:var(--muted)]">
@@ -226,7 +266,7 @@ export default function WishlistPage() {
               {email || "U Steam uctu neni v DB ulozeny e-mail."}
             </div>
             <p className="mt-1 text-xs text-[color:var(--muted)]">
-              Alerty se posilaji na e-mail ulozeny u prihlaseneho Steam uctu.
+              E-mail alert odchazi pri kazde ulozene zmene ceny u skinu, kde je zapnuty.
             </p>
           </div>
           <div
@@ -279,36 +319,12 @@ export default function WishlistPage() {
                 marketPage={item.skin.marketPage}
                 density="compact"
               />
-              <div className="flex items-center justify-between gap-3 text-xs text-[color:var(--muted)]">
-                <span>Pridano {formatDate(item.addedAt)}</span>
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={item.emailAlertsEnabled}
-                    disabled={updatingAlertSkinId === item.skin.id}
-                    onClick={() =>
-                      toggleEmailAlerts(item.skin.id, !item.emailAlertsEnabled)
-                    }
-                    className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-2.5 py-1 transition hover:border-[color:var(--accent-2)] disabled:cursor-wait disabled:opacity-60"
-                  >
-                    <span
-                      className={
-                        item.emailAlertsEnabled
-                          ? "relative inline-flex h-5 w-9 items-center rounded-full bg-emerald-500"
-                          : "relative inline-flex h-5 w-9 items-center rounded-full bg-slate-600"
-                      }
-                    >
-                      <span
-                        className={
-                          item.emailAlertsEnabled
-                            ? "ml-4 h-4 w-4 rounded-full bg-white transition"
-                            : "ml-0.5 h-4 w-4 rounded-full bg-white transition"
-                        }
-                      />
-                    </span>
-                    <span>{item.emailAlertsEnabled ? "Alerty" : "Bez alertu"}</span>
-                  </button>
+              <div className="text-xs text-[color:var(--muted)]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
+                    {renderAlertToggle(item, "alertsEnabled", "Alerty")}
+                    {renderAlertToggle(item, "emailAlertsEnabled", "E-mail")}
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeItem(item.skin.name)}

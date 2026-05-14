@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getSharpPriceChangeThresholdPercent } from "@/app/lib/price-alerts";
 import { upsertSkinFromSkinportName } from "@/app/lib/skin-database";
 import { getOrCreateSteamUser, normalizeSteamId } from "@/app/lib/user-auth";
 
@@ -13,6 +12,7 @@ type FavoriteWithSkin = Prisma.FavoriteGetPayload<{
 
 const mapWishlistItem = (favorite: FavoriteWithSkin) => ({
   addedAt: favorite.createdAt.toISOString(),
+  alertsEnabled: favorite.alertsEnabled,
   emailAlertsEnabled: favorite.emailAlertsEnabled,
   skin: {
     id: favorite.skin.id,
@@ -89,7 +89,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     email: user?.email ?? null,
-    sharpThresholdPercent: getSharpPriceChangeThresholdPercent(),
     items: user?.favorites.map(mapWishlistItem) ?? [],
   });
 }
@@ -154,8 +153,19 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Skin nebyl nalezen." }, { status: 404 });
   }
 
+  const alertsEnabled = parseBoolean(body?.alertsEnabled);
   const emailAlertsEnabled = parseBoolean(body?.emailAlertsEnabled);
-  if (emailAlertsEnabled === null) {
+  const data: Prisma.FavoriteUpdateInput = {};
+
+  if (alertsEnabled !== null) {
+    data.alertsEnabled = alertsEnabled;
+  }
+
+  if (emailAlertsEnabled !== null) {
+    data.emailAlertsEnabled = emailAlertsEnabled;
+  }
+
+  if (!Object.keys(data).length) {
     return NextResponse.json(
       { error: "Neplatna hodnota nastaveni alertu." },
       { status: 400 }
@@ -185,7 +195,7 @@ export async function PATCH(req: NextRequest) {
         skinId: skin.id,
       },
     },
-    data: { emailAlertsEnabled },
+    data,
     include: { skin: true },
   });
 

@@ -10,6 +10,17 @@ const parseLimit = (value: string | null) => {
   return Math.min(Math.max(parsed, 1), 100);
 };
 
+const parseNotificationIds = (body: unknown) => {
+  if (!body || typeof body !== "object") return [];
+
+  const payload = body as { id?: unknown; ids?: unknown };
+  const values = Array.isArray(payload.ids) ? payload.ids : [payload.id];
+
+  return values
+    .map((value: unknown) => Number.parseInt(String(value), 10))
+    .filter((value: number) => Number.isFinite(value) && value > 0);
+};
+
 const mapNotification = (notification: Awaited<ReturnType<typeof fetchNotifications>>[number]) => ({
   id: notification.id,
   type: notification.type,
@@ -93,11 +104,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ updated: 0 });
   }
 
-  const ids = Array.isArray(body?.ids)
-    ? body.ids
-        .map((value: unknown) => Number.parseInt(String(value), 10))
-        .filter((value: number) => Number.isFinite(value) && value > 0)
-    : [];
+  const ids = parseNotificationIds(body);
 
   const where =
     ids.length > 0
@@ -110,4 +117,33 @@ export async function PATCH(req: NextRequest) {
   });
 
   return NextResponse.json({ updated: result.count });
+}
+
+export async function DELETE(req: NextRequest) {
+  const body = await req.json().catch(() => null);
+  const steamId = normalizeSteamId(body?.steamId);
+
+  if (!steamId) {
+    return NextResponse.json({ error: "Missing SteamID." }, { status: 400 });
+  }
+
+  const ids = parseNotificationIds(body);
+  if (ids.length === 0) {
+    return NextResponse.json({ error: "Missing notification ID." }, { status: 400 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { steamId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return NextResponse.json({ deleted: 0 });
+  }
+
+  const result = await prisma.notification.deleteMany({
+    where: { userId: user.id, id: { in: ids } },
+  });
+
+  return NextResponse.json({ deleted: result.count });
 }

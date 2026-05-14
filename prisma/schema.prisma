@@ -78,6 +78,7 @@ model PriceHistory {
 model Favorite {
   userId             Int
   skinId             Int
+  alertsEnabled      Boolean   @default(true)
   emailAlertsEnabled Boolean   @default(true)
   lastEmailAlertAt   DateTime?
   createdAt          DateTime  @default(now())
