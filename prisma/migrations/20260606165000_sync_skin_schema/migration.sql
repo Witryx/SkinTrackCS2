@@ -345,20 +345,6 @@ PREPARE stmt FROM @ddl;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
-SET @ddl = (
-  SELECT IF(COUNT(*) > 0,
-    'ALTER TABLE `PriceSnapshot` DROP INDEX `PriceSnapshot_skinId_shopId_capturedAt_idx`',
-    'SELECT 1'
-  )
-  FROM INFORMATION_SCHEMA.STATISTICS
-  WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'PriceSnapshot'
-    AND INDEX_NAME = 'PriceSnapshot_skinId_shopId_capturedAt_idx'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
 ALTER TABLE `PriceSnapshot`
   MODIFY `price` DOUBLE NOT NULL;
 
