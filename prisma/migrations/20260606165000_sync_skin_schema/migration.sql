@@ -1,0 +1,377 @@
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `User` ADD COLUMN `avatarUrl` VARCHAR(191) NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'User'
+    AND COLUMN_NAME = 'avatarUrl'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `marketHashName` VARCHAR(191) NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'marketHashName'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `skin` VARCHAR(191) NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'skin'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `wear` VARCHAR(191) NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'wear'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `minFloat` DOUBLE NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'minFloat'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `maxFloat` DOUBLE NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'maxFloat'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `price` DOUBLE NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'price'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `medianPrice` DOUBLE NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'medianPrice'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `suggestedPrice` DOUBLE NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'suggestedPrice'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `quantity` INTEGER NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'quantity'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `volume7d` DOUBLE NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'volume7d'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `median7d` DOUBLE NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'median7d'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `currency` VARCHAR(191) NOT NULL DEFAULT ''EUR''',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'currency'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `itemPage` VARCHAR(191) NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'itemPage'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `marketPage` VARCHAR(191) NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'marketPage'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `Skin` ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'updatedAt'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 1,
+    'UPDATE `Skin` SET `marketHashName` = COALESCE(`marketHashName`, CONCAT(`weapon`, '' | '', `name`)), `skin` = COALESCE(`skin`, `name`)',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'name'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE `Skin`
+SET
+  `marketHashName` = COALESCE(`marketHashName`, CONCAT(`weapon`, ' | ', COALESCE(`skin`, 'Unknown'))),
+  `skin` = COALESCE(`skin`, 'Unknown');
+
+ALTER TABLE `Skin`
+  MODIFY `marketHashName` VARCHAR(191) NOT NULL,
+  MODIFY `skin` VARCHAR(191) NOT NULL,
+  MODIFY `imageUrl` TEXT NULL,
+  MODIFY `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);
+
+SET @ddl = (
+  SELECT IF(COUNT(*) > 0,
+    'ALTER TABLE `Skin` DROP INDEX `Skin_weapon_name_idx`',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND INDEX_NAME = 'Skin_weapon_name_idx'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 1,
+    'ALTER TABLE `Skin` DROP COLUMN `name`',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND COLUMN_NAME = 'name'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'CREATE UNIQUE INDEX `Skin_marketHashName_key` ON `Skin`(`marketHashName`)',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND INDEX_NAME = 'Skin_marketHashName_key'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'CREATE INDEX `Skin_weapon_skin_idx` ON `Skin`(`weapon`, `skin`)',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND INDEX_NAME = 'Skin_weapon_skin_idx'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'CREATE INDEX `Skin_rarity_idx` ON `Skin`(`rarity`)',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND INDEX_NAME = 'Skin_rarity_idx'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'CREATE INDEX `Skin_price_idx` ON `Skin`(`price`)',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND INDEX_NAME = 'Skin_price_idx'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'CREATE INDEX `Skin_marketHashName_idx` ON `Skin`(`marketHashName`)',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'Skin'
+    AND INDEX_NAME = 'Skin_marketHashName_idx'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) > 0,
+    'ALTER TABLE `PriceSnapshot` DROP INDEX `PriceSnapshot_skinId_shopId_capturedAt_idx`',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'PriceSnapshot'
+    AND INDEX_NAME = 'PriceSnapshot_skinId_shopId_capturedAt_idx'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+ALTER TABLE `PriceSnapshot`
+  MODIFY `price` DOUBLE NOT NULL;
+
+SET @ddl = (
+  SELECT IF(COUNT(*) = 0,
+    'CREATE INDEX `PriceSnapshot_skinId_capturedAt_idx` ON `PriceSnapshot`(`skinId`, `capturedAt`)',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'PriceSnapshot'
+    AND INDEX_NAME = 'PriceSnapshot_skinId_capturedAt_idx'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
