@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withTimeout } from "@/app/lib/async-timeout";
 import { searchSkinsDb } from "@/app/lib/skin-database";
 import { searchSkinsLocal } from "@/app/lib/skin-catalog";
 
@@ -7,13 +8,13 @@ export async function GET(req: NextRequest) {
   const limitParam = parseInt(searchParams.get("limit") ?? "50", 10);
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 2000) : 50;
 
-  try {
-    const items = await searchSkinsDb({ limit, sort: "volume" });
-    if (Array.isArray(items) && items.length) {
-      return NextResponse.json({ items });
-    }
-  } catch (error) {
-    console.error("Skin DB listing failed, falling back to local catalog", error);
+  const dbItems = await withTimeout(
+    searchSkinsDb({ limit, sort: "volume" }),
+    250,
+    null
+  );
+  if (Array.isArray(dbItems) && dbItems.length) {
+    return NextResponse.json({ items: dbItems, source: "db" });
   }
 
   try {

@@ -1,6 +1,12 @@
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
+import {
+  encryptSensitiveValue,
+  getUserContactEmail,
+  hashSensitiveLookup,
+  normalizeSensitiveEmail,
+} from "@/app/lib/secure-data";
 import { upsertSkinFromSkinportName } from "@/app/lib/skin-database";
 import { getOrCreateSteamUser, normalizeSteamId } from "@/app/lib/user-auth";
 
@@ -49,6 +55,14 @@ const parseSkinId = (value: unknown) => {
 const parseBoolean = (value: unknown) =>
   typeof value === "boolean" ? value : null;
 
+const parseNotificationEmail = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const email = value.trim();
+  if (!email) return "";
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+  return valid ? email : null;
+};
+
 async function resolveSkin(input: { skinId?: unknown; marketHashName?: unknown }) {
   const skinId = parseSkinId(input.skinId);
   const marketHashName = parseMarketHashName(input.marketHashName);
@@ -88,7 +102,7 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({
-    email: user?.email ?? null,
+    email: user ? getUserContactEmail(user) : null,
     items: user?.favorites.map(mapWishlistItem) ?? [],
   });
 }
@@ -143,6 +157,43 @@ export async function PATCH(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { steamId } });
   if (!user) {
     return NextResponse.json({ error: "Uzivatel nebyl nalezen." }, { status: 404 });
+  }
+
+  if (body && Object.prototype.hasOwnProperty.call(body, "email")) {
+    const email = parseNotificationEmail(body.email);
+    if (email === null) {
+      return NextResponse.json({ error: "Neplatny e-mail." }, { status: 400 });
+    }
+
+    try {
+      const normalizedEmail = email ? normalizeSensitiveEmail(email) : "";
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email: null,
+          emailEncrypted: email ? encryptSensitiveValue(email) : null,
+          emailHash: email ? hashSensitiveLookup(normalizedEmail) : null,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "Tento e-mail uz pouziva jiny ucet." },
+          { status: 409 }
+        );
+      }
+
+      console.error("Encrypted e-mail update failed", error);
+      return NextResponse.json(
+        { error: "E-mail se nepodarilo ulozit." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ email: email || null });
   }
 
   const skin = await resolveSkin({

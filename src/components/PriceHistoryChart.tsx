@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -18,6 +18,7 @@ type PriceHistoryPoint = {
 type Props = {
   points: PriceHistoryPoint[];
   currency?: string;
+  marketHashName?: string;
 };
 
 const periods = [
@@ -30,16 +31,101 @@ const periods = [
 const toDate = (value: string) =>
   new Date(value.length > 10 ? value : `${value}T00:00:00Z`);
 
-export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
+export default function PriceHistoryChart({
+  points,
+  currency = "EUR",
+  marketHashName,
+}: Props) {
+  const [history, setHistory] = useState({
+    points,
+    currency,
+  });
+  const [loadingHistory, setLoadingHistory] = useState(Boolean(marketHashName));
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [period, setPeriod] = useState<(typeof periods)[number]>(() => periods[2]);
+
+  useEffect(() => {
+    setHistory({ points, currency });
+  }, [points, currency, marketHashName]);
+
+  useEffect(() => {
+    if (!marketHashName) {
+      setLoadingHistory(false);
+      return;
+    }
+
+    let controller: AbortController | null = null;
+
+    const loadHistory = () => {
+      controller?.abort();
+      const currentController = new AbortController();
+      controller = currentController;
+      setLoadingHistory(true);
+      setHistoryError(null);
+
+      fetch(
+        `/api/skins/price-history?${new URLSearchParams({
+          name: marketHashName,
+          days: "90",
+        }).toString()}`,
+        {
+          cache: "no-store",
+          signal: currentController.signal,
+        }
+      )
+        .then(async (response) => {
+          if (!response.ok) throw new Error("Price history failed");
+          return response.json();
+        })
+        .then((body) => {
+          const nextPoints = Array.isArray(body?.points) ? body.points : [];
+          setHistory({
+            points: nextPoints,
+            currency: typeof body?.currency === "string" ? body.currency : "EUR",
+          });
+        })
+        .catch((error) => {
+          if (error.name === "AbortError") return;
+          console.error("Price history fetch failed", error);
+          setHistoryError("Graf se nepodarilo nacist.");
+        })
+        .finally(() => {
+          if (!currentController.signal.aborted) {
+            setLoadingHistory(false);
+          }
+        });
+    };
+
+    const handleHistoryUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ marketHashName?: string }>).detail;
+      if (detail?.marketHashName === marketHashName) {
+        loadHistory();
+      }
+    };
+
+    loadHistory();
+    window.addEventListener(
+      "skintrack:price-history-updated",
+      handleHistoryUpdated
+    );
+
+    return () => {
+      controller?.abort();
+      window.removeEventListener(
+        "skintrack:price-history-updated",
+        handleHistoryUpdated
+      );
+    };
+  }, [marketHashName]);
+
   const windowMs =
     period.unit === "hour"
       ? period.amount * 60 * 60 * 1000
       : period.amount * 24 * 60 * 60 * 1000;
 
   const sorted = useMemo(
-    () => [...points].sort((a, b) => a.date.localeCompare(b.date)),
-    [points]
+    () => [...history.points].sort((a, b) => a.date.localeCompare(b.date)),
+    [history.points]
   );
 
   const windowStart = useMemo(() => {
@@ -67,10 +153,10 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
     () =>
       new Intl.NumberFormat("cs-CZ", {
         style: "currency",
-        currency,
+        currency: history.currency,
         maximumFractionDigits: 2,
       }),
-    [currency]
+    [history.currency]
   );
 
   const dateFormatter = useMemo(
@@ -187,8 +273,10 @@ export default function PriceHistoryChart({ points, currency = "EUR" }: Props) {
 
       {!hasData && (
         <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-6 text-sm text-[color:var(--muted)]">
-          Zatim nejsou zadna historicka data nejlevnejsi live ceny. Graf se
-          zacne plnit po dalsich live updatech marketu.
+          {loadingHistory
+            ? "Nacitam historii ceny..."
+            : historyError ??
+              "Zatim nejsou zadna historicka data nejlevnejsi live ceny. Graf se zacne plnit po dalsich live updatech marketu."}
         </div>
       )}
 

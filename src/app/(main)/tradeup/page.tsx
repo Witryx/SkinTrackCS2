@@ -92,6 +92,17 @@ type PriceLookupResponse = {
   prices?: Record<string, PriceLookupEntry>;
 };
 
+type TradeupEligibilityEntry = {
+  canOutput: boolean;
+  reason: string | null;
+  pool: string | null;
+  outputCount: number;
+};
+
+type TradeupEligibilityResponse = {
+  eligibility?: Record<string, TradeupEligibilityEntry>;
+};
+
 const rarityOptions: Array<{ value: RarityFilter; label: string }> = [
   { value: "all", label: "Vsechny kvality" },
   { value: "Consumer", label: "Consumer" },
@@ -425,6 +436,10 @@ export default function TradeupPage() {
   const [results, setResults] = useState<SkinResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [eligibilityByName, setEligibilityByName] = useState<
+    Record<string, TradeupEligibilityEntry>
+  >({});
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
 
   const [inputs, setInputs] = useState<InputItem[]>([]);
   const [outcomePriceInputs, setOutcomePriceInputs] = useState<
@@ -714,6 +729,51 @@ export default function TradeupPage() {
     return list;
   }, [uniqueResults, sortMode]);
 
+  const eligibilityNames = useMemo(
+    () => sortedResults.map((item) => item.name),
+    [sortedResults]
+  );
+  const eligibilitySignature = useMemo(
+    () => eligibilityNames.join("\n"),
+    [eligibilityNames]
+  );
+
+  useEffect(() => {
+    if (!eligibilityNames.length) {
+      setEligibilityByName({});
+      setEligibilityLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setEligibilityLoading(true);
+
+    fetch("/api/tradeup/eligibility", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: knifeMode ? "knife" : "standard",
+        names: eligibilityNames,
+      }),
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Eligibility fetch failed");
+        return (await res.json()) as TradeupEligibilityResponse;
+      })
+      .then((body) => {
+        setEligibilityByName(body.eligibility ?? {});
+      })
+      .catch((err) => {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        console.error("Trade-up eligibility lookup failed", err);
+        setEligibilityByName({});
+      })
+      .finally(() => setEligibilityLoading(false));
+
+    return () => controller.abort();
+  }, [eligibilitySignature, eligibilityNames, knifeMode]);
+
   const clearFilters = () => {
     setQuery("");
     setRarity(knifeMode ? "Covert" : "all");
@@ -731,12 +791,22 @@ export default function TradeupPage() {
     setOutcomePriceInputs({});
     setSimResult(null);
     setSimError(null);
+    setEligibilityByName({});
     setCollection("all");
     setRarity(enabled ? "Covert" : "all");
   };
 
   const addInput = (item: SkinResult) => {
     if (inputs.length >= requiredItems) return;
+    const eligibility = eligibilityByName[item.name] ?? null;
+    if (!eligibility && eligibilityLoading) {
+      setSimError("Pockej na kontrolu outputu pro tenhle skin.");
+      return;
+    }
+    if (eligibility && !eligibility.canOutput) {
+      setSimError(eligibility.reason ?? "Tenhle skin nema zadne platne outputy.");
+      return;
+    }
     const variant = getItemVariant(item.name);
     if (variant === "souvenir") {
       setSimError("Souvenir skiny nejdou pouzit v Trade Up Contractu.");
@@ -828,6 +898,7 @@ export default function TradeupPage() {
     const available = sortedResults.filter(
       (item) =>
         item.rarity === targetRarity &&
+        eligibilityByName[item.name]?.canOutput === true &&
         getItemVariant(item.name) === targetVariant &&
         (targetVariant !== "stattrak" || !knifeMode || hasStattrakKnifePool(item)) &&
         (!knifeMode || (!isSpecialItem(item) && getTradeupPools(item, true).length > 0)) &&
@@ -1500,6 +1571,9 @@ export default function TradeupPage() {
                 knifeMode && (item.rarity !== "Covert" || isSpecialItem(item));
               const stattrakPoolBlocked =
                 knifeMode && variant === "stattrak" && !hasStattrakKnifePool(item);
+              const eligibility = eligibilityByName[item.name] ?? null;
+              const eligibilityPending = eligibilityLoading && !eligibility;
+              const outputBlocked = eligibility?.canOutput === false;
               const addDisabled =
                 inputs.length >= requiredItems ||
                 rarityBlocked ||
@@ -1507,7 +1581,9 @@ export default function TradeupPage() {
                 souvenirBlocked ||
                 covertBlocked ||
                 knifeBlocked ||
-                stattrakPoolBlocked;
+                stattrakPoolBlocked ||
+                eligibilityPending ||
+                outputBlocked;
               const addLabel = souvenirBlocked
                 ? "Souvenir nejde"
                 : variantBlocked
@@ -1518,6 +1594,10 @@ export default function TradeupPage() {
                       ? "Gold mode"
                       : stattrakPoolBlocked
                         ? "Bez ST noze"
+                      : eligibilityPending
+                        ? "Kontrola"
+                      : outputBlocked
+                        ? "Bez outputu"
                       : knifeBlocked
                         ? "Nejde do Gold"
                         : "Pridej";
@@ -1572,6 +1652,7 @@ export default function TradeupPage() {
                     <button
                       onClick={() => addInput(item)}
                       disabled={addDisabled}
+                      title={outputBlocked ? eligibility?.reason ?? undefined : undefined}
                       className="flex flex-1 items-center justify-center rounded-lg bg-[color:var(--fg)] px-3 py-2 text-xs font-black text-[color:var(--bg)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-[color:var(--surface-strong)] disabled:text-[color:var(--muted)]"
                     >
                       {addLabel}
@@ -1810,13 +1891,6 @@ export default function TradeupPage() {
                 </div>
               </div>
             </div>
-
-            {(metrics.isMissingSomeInputPrices || metrics.isMissingSomeOutcomePrices) && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                Cast cen chybi. Doplnenim vlastnich cen v contractu nebo u outcome
-                dostanes presnejsi profitabilitu.
-              </div>
-            )}
 
             {simError && (
               <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">

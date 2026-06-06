@@ -1,17 +1,44 @@
-version: "3.9"
 services:
-  mariadb:
-    image: mariadb:11
-    container_name: cs2_mariadb
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: skintrack_app
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: root
-      MARIADB_DATABASE: skinner
-      MARIADB_USER: skinner
-      MARIADB_PASSWORD: skinnerpass
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-mysql://skinner:skinnerpass@mariadb:3306/skinner}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-change-me-in-production}
+      STEAM_API_KEY: ${STEAM_API_KEY:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      CSFLOAT_API_KEY: ${CSFLOAT_API_KEY:-}
+      DMARKET_PUBLIC_KEY: ${DMARKET_PUBLIC_KEY:-}
+      DMARKET_SECRET_KEY: ${DMARKET_SECRET_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:11
+    container_name: skintrack_mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-skinner}
+      MARIADB_USER: ${MARIADB_USER:-skinner}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-skinnerpass}
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$${MARIADB_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 volumes:
   db_data:

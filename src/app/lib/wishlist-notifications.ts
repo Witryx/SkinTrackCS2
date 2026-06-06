@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { prisma } from "./prisma";
 import { calculateChangePercent } from "./price-alerts";
 import { sendPriceAlertEmail } from "./email";
+import { getUserContactEmail } from "./secure-data";
 import { getSkinDetailPath } from "./skin-images";
 
 export type WishlistPriceChange = {
@@ -82,7 +83,7 @@ export async function processWishlistPriceChanges(
       : null;
     if (notification) notificationsCreated += 1;
 
-    const steamAccountEmail = favorite.user.email;
+    const steamAccountEmail = getUserContactEmail(favorite.user);
     const shouldSendEmail =
       favorite.emailAlertsEnabled &&
       Boolean(steamAccountEmail) &&

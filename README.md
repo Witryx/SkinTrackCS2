@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SkinTrack CS2
 
-## Getting Started
+Webova aplikace pro sledovani CS2 skinu, cen, trendu, wishlistu a cenovych alertu.
 
-First, run the development server:
+## Splneni pozadavku
+
+| Pozadavek | Splneni v projektu |
+| --- | --- |
+| Programovaci jazyk a framework | TypeScript, React a Next.js App Router |
+| Databaze a jeji vyuziti | MariaDB/MySQL pres Prisma ORM, modely `User`, `Skin`, `Shop`, `PriceHistory`, `Favorite`, `Notification` |
+| Kontejnerizace | `Dockerfile` pro aplikaci a `docker-compose.yml` pro aplikaci + MariaDB |
+| Responzivni design | Tailwind CSS, responzivni gridy a breakpointy pro desktop i mobil |
+| Sifrovani citlivych udaju | API klice v env promennych, e-mail pro alerty ulozeny pomoci AES-256-GCM, lookup pres HMAC hash |
+| Nasazena aplikace | Aplikace je pripravena pro Docker deployment nebo Vercel/Render deployment; produkcni URL nastavte v `NEXT_PUBLIC_SITE_URL` |
+| Podminky pouzivani / privacy policy | Stranka `/privacy` dostupna z paticky aplikace |
+
+## Lokalne
+
+1. Nainstalujte zavislosti:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Vytvorte `.env` podle `.env.example` a nastavte minimalne:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+DATABASE_URL="mysql://skinner:skinnerpass@localhost:3306/skinner"
+DOCKER_DATABASE_URL="mysql://skinner:skinnerpass@mariadb:3306/skinner"
+NEXT_PUBLIC_SITE_URL="http://localhost:3000"
+APP_ENCRYPTION_KEY="..."
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Klic pro sifrovani vygenerujete:
 
-## Learn More
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
 
-To learn more about Next.js, take a look at the following resources:
+3. Spustte databazi:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+docker compose up -d mariadb
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. Aplikujte migrace a spustte aplikaci:
 
-## Deploy on Vercel
+```bash
+npm run db:migrate
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Aplikace pobezi na `http://localhost:3000`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Docker
+
+Pro kompletni beh aplikace i databaze:
+
+```bash
+docker compose up --build
+```
+
+Compose spusti:
+
+- `app` na portu `3000`
+- `mariadb` na portu `3306`
+- automaticke `prisma migrate deploy` pri startu kontejneru aplikace
+
+## Produkcni nasazeni
+
+Pro produkci nastavte tyto promenne prostredi v hostingu:
+
+- `DATABASE_URL`
+- `DOCKER_DATABASE_URL` pro Docker Compose, pokud se lisi od defaultni MariaDB sluzby
+- `NEXT_PUBLIC_SITE_URL`
+- `APP_ENCRYPTION_KEY`
+- volitelne `STEAM_API_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `CSFLOAT_API_KEY`, `DMARKET_PUBLIC_KEY`, `DMARKET_SECRET_KEY`
+
+Po nasazeni spustte migrace:
+
+```bash
+npm run db:migrate
+```
+
+Build:
+
+```bash
+npm run build
+npm run start
+```
+
+### Vercel Cron
+
+Projekt obsahuje `vercel.json` s cronem:
+
+```json
+{
+  "path": "/api/skins/cron",
+  "schedule": "0 3 * * *"
+}
+```
+
+To znamena jednou denne ve 03:00 UTC. Vercel Hobby plan nepovoli castejsi cron typu `0 */6 * * *`, proto musi byt schedule maximalne jednou denne. Pokud je cron nastaveny i ve Vercel dashboardu, zmente ho tam na stejnou hodnotu nebo ho smazte a nechte konfiguraci z repozitare.

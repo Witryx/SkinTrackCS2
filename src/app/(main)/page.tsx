@@ -1,40 +1,58 @@
 import Link from "next/link";
-import { getTrendingSkins } from "@/app/lib/skinport";
+import { withTimeout } from "@/app/lib/async-timeout";
+import { searchSkinsLocal } from "@/app/lib/skin-catalog";
 import { getTrendingSkinsFromDb } from "@/app/lib/skin-database";
 import { getSkinImageUrl } from "@/app/lib/skin-images";
 import SkinMarketCard from "@/components/SkinMarketCard";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
-  let data:
-    | {
-        featured: Awaited<ReturnType<typeof getTrendingSkins>>["featured"];
-        trending: Awaited<ReturnType<typeof getTrendingSkins>>["trending"];
-      }
-    | null = null;
-  let source: "skinport" | "db" | "none" = "skinport";
+type TrendingData = Awaited<ReturnType<typeof getTrendingSkinsFromDb>>;
 
-  try {
-    data = await getTrendingSkins();
-  } catch (error) {
-    console.error("Trending fetch failed", error);
+async function getTrendingSkinsFromLocalCatalog(): Promise<TrendingData> {
+  const items = await searchSkinsLocal({ limit: 33, sort: "volume" });
+  const mapped = items.map((item) => ({
+    name: item.name,
+    weapon: item.weapon,
+    skin: item.skin,
+    wear: item.wear ?? null,
+    price: item.price ?? null,
+    volume7d: item.volume7d ?? null,
+    median7d: item.median7d ?? null,
+    quantity: item.quantity ?? null,
+    rarity: item.rarity,
+    itemPage: item.itemPage ?? undefined,
+    marketPage: item.marketPage ?? undefined,
+  }));
+
+  return {
+    featured: mapped.slice(0, 3),
+    trending: mapped.slice(3, 33),
+  };
+}
+
+export default async function HomePage() {
+  let data: TrendingData | null = null;
+  let source: "db" | "local" | "none" = "db";
+
+  const dbData = await withTimeout(getTrendingSkinsFromDb(), 250, null);
+  if (dbData?.featured.length) {
+    data = dbData;
   }
 
   if (!data || !data.featured?.length) {
     try {
-      const dbData = await getTrendingSkinsFromDb();
-      data = dbData;
-      source = dbData.featured.length ? "db" : "none";
+      data = await getTrendingSkinsFromLocalCatalog();
+      source = data.featured.length ? "local" : "none";
     } catch (error) {
-      console.error("Trending DB fallback failed", error);
+      console.error("Trending local fallback failed", error);
       source = "none";
     }
   }
 
   const highlight = data?.featured?.[0] ?? null;
   const badgeText =
-    source === "skinport" ? "Live Skinport" : source === "db" ? "DB cache" : "Offline";
+    source === "db" ? "DB cache" : source === "local" ? "Offline katalog" : "Offline";
   const visibleItems = [...(data?.featured ?? []), ...(data?.trending ?? [])];
   const pricedItems = visibleItems.filter((item) => typeof item.price === "number");
   const totalVolume = visibleItems.reduce(

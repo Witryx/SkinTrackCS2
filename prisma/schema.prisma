@@ -8,20 +8,22 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  steamId   String?   @unique
-  email     String?   @unique
-  name      String?
-  avatarUrl String?
-  createdAt DateTime  @default(now())
+  id             Int      @id @default(autoincrement())
+  steamId        String?  @unique
+  email          String?  @unique
+  emailEncrypted String?  @db.Text
+  emailHash      String?  @unique
+  name           String?
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
 
   favorites     Favorite[]
   notifications Notification[]
 }
 
 model Skin {
-  id             Int              @id @default(autoincrement())
-  marketHashName String           @unique
+  id             Int      @id @default(autoincrement())
+  marketHashName String   @unique
   weapon         String
   skin           String
   wear           String?
@@ -34,16 +36,16 @@ model Skin {
   quantity       Int?
   volume7d       Float?
   median7d       Float?
-  currency       String           @default("EUR")
+  currency       String   @default("EUR")
   itemPage       String?
   marketPage     String?
-  imageUrl       String?          @db.Text
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  imageUrl       String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  priceHistory   PriceHistory[]
-  favorites      Favorite[]
-  notifications  Notification[]
+  priceHistory  PriceHistory[]
+  favorites     Favorite[]
+  notifications Notification[]
 
   @@index([weapon, skin])
   @@index([rarity])
@@ -52,10 +54,10 @@ model Skin {
 }
 
 model Shop {
-  id        Int             @id @default(autoincrement())
-  name      String          @unique
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
   url       String?
-  createdAt DateTime        @default(now())
+  createdAt DateTime @default(now())
 
   priceHistory PriceHistory[]
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import SkinMarketCard from "@/components/SkinMarketCard";
 
@@ -36,6 +37,8 @@ export default function WishlistPage() {
   const [steamId, setSteamId] = useState<string | null>(null);
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [email, setEmail] = useState("");
+  const [emailDraft, setEmailDraft] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updatingAlertKey, setUpdatingAlertKey] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -85,13 +88,60 @@ export default function WishlistPage() {
       if (!response.ok) throw new Error("Wishlist fetch failed");
       const body = await response.json();
       const nextItems = Array.isArray(body.items) ? body.items : [];
+      const nextEmail = body.email ?? "";
       setItems(nextItems);
-      setEmail(body.email ?? "");
+      setEmail(nextEmail);
+      setEmailDraft(nextEmail);
     } catch (error) {
       console.error("Wishlist fetch failed", error);
       setStatus("Wishlist se nepodarilo nacist.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveNotificationEmail = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!steamId) return;
+
+    const nextEmail = emailDraft.trim();
+    if (nextEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      setStatus("Zadej platny e-mail.");
+      return;
+    }
+
+    setSavingEmail(true);
+    setStatus(null);
+
+    try {
+      const response = await fetch("/api/wishlist", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          steamId,
+          email: nextEmail,
+        }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(body?.error ?? "E-mail update failed");
+      }
+
+      const savedEmail = body?.email ?? "";
+      setEmail(savedEmail);
+      setEmailDraft(savedEmail);
+      setStatus(
+        savedEmail
+          ? "E-mail pro alerty byl ulozen sifrovane."
+          : "E-mail pro alerty byl odebran."
+      );
+    } catch (error) {
+      console.error("Wishlist e-mail update failed", error);
+      setStatus(
+        error instanceof Error ? error.message : "E-mail se nepodarilo ulozit."
+      );
+    } finally {
+      setSavingEmail(false);
     }
   };
 
@@ -126,7 +176,7 @@ export default function WishlistPage() {
   ) => {
     if (!steamId) return;
     if (setting === "emailAlertsEnabled" && enabled && !email) {
-      setStatus("E-mail u Steam uctu chybi, proto nejde zapnout e-mail alert.");
+      setStatus("Nejdriv uloz e-mail pro alerty.");
       return;
     }
 
@@ -260,24 +310,32 @@ export default function WishlistPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="text-xs font-semibold uppercase text-[color:var(--muted)]">
-              E-mail ze Steam uctu
-            </div>
-            <div className="mt-2 text-sm font-semibold text-[color:var(--fg)]">
-              {email || "U Steam uctu neni v DB ulozeny e-mail."}
+              E-mail pro alerty
             </div>
             <p className="mt-1 text-xs text-[color:var(--muted)]">
-              E-mail alert odchazi pri kazde ulozene zmene ceny u skinu, kde je zapnuty.
+              Kontakt se uklada sifrovane a pouziva se jen pro cenove alerty.
             </p>
           </div>
-          <div
-            className={
-              email
-                ? "rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200"
-                : "rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-200"
-            }
+          <form
+            onSubmit={saveNotificationEmail}
+            className="flex w-full flex-col gap-2 sm:flex-row md:max-w-xl"
           >
-            {email ? "E-mail pripraveny" : "E-mail chybi"}
-          </div>
+            <input
+              type="email"
+              value={emailDraft}
+              onChange={(event) => setEmailDraft(event.target.value)}
+              placeholder="email@example.com"
+              aria-label="E-mail pro alerty"
+              className="min-h-11 min-w-0 flex-1 rounded-xl border border-[color:var(--border)] bg-[color:var(--card-solid)] px-3 text-sm font-semibold outline-none transition focus:border-[color:var(--accent)]"
+            />
+            <button
+              type="submit"
+              disabled={savingEmail || emailDraft.trim() === email}
+              className="btn-primary min-w-28 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {savingEmail ? "Ukladam..." : "Ulozit"}
+            </button>
+          </form>
         </div>
       </div>
 

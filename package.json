@@ -6,6 +6,8 @@
     "dev": "node scripts/dev.js",
     "build": "next build",
     "start": "next start",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {

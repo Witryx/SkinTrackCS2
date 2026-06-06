@@ -1,21 +1,14 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { isCronAuthorized } from "@/app/lib/cron-auth";
 import { recordPriceHistory, syncSkinDatabase } from "@/app/lib/skin-database";
 import { processWishlistPriceChanges } from "@/app/lib/wishlist-notifications";
 
 export const dynamic = "force-dynamic";
 
-function isAuthorized(headersList: Headers) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
-  const provided =
-    headersList.get("x-cron-secret") || headersList.get("authorization");
-  return provided === secret;
-}
-
 export async function POST() {
   const headersList = headers();
-  if (!isAuthorized(headersList)) {
+  if (!isCronAuthorized(headersList)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

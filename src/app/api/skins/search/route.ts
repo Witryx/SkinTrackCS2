@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withTimeout } from "@/app/lib/async-timeout";
 import { searchSkinsDb } from "@/app/lib/skin-database";
 import { searchSkinsLocal } from "@/app/lib/skin-catalog";
 import { searchSkins } from "@/app/lib/skinport";
@@ -84,19 +85,11 @@ export async function GET(req: NextRequest) {
       tradable,
     };
 
-    try {
-      const items = await searchSkinsDb(baseFilters);
-      if (!Array.isArray(items)) {
-        console.error("Skin DB search returned a non-array response", { items });
-        // Continue to fallback
-      } else if (items.length) {
-        return NextResponse.json({ items });
-      }
-    } catch (error) {
-      console.error("Skin DB search failed, falling back to local catalog", error);
+    const dbItems = await withTimeout(searchSkinsDb(baseFilters), 250, null);
+    if (Array.isArray(dbItems) && dbItems.length) {
+      return NextResponse.json({ items: dbItems, source: "db" });
     }
 
-    // Fallback to local catalog (offline JSON)
     try {
       const items = await searchSkinsLocal(baseFilters);
       if (!Array.isArray(items)) {
@@ -108,19 +101,12 @@ export async function GET(req: NextRequest) {
       console.error("Local catalog search failed", localErr);
     }
 
-    // Last resort: external API
-    try {
-      const items = await searchSkins(baseFilters);
-      if (!Array.isArray(items)) {
-        console.error("Skinport fallback returned a non-array response", { items });
-        return NextResponse.json({ items: [], fallback: "skinport" });
-      }
-
-      return NextResponse.json({ items, fallback: "skinport" });
-    } catch (fallbackErr) {
-      console.error("Skinport fallback search failed", fallbackErr);
+    const skinportItems = await withTimeout(searchSkins(baseFilters), 1500, []);
+    if (!Array.isArray(skinportItems)) {
       return NextResponse.json({ items: [], fallback: "skinport" });
     }
+
+    return NextResponse.json({ items: skinportItems, fallback: "skinport" });
   } catch (err) {
     console.error("Unhandled error in skins search handler", err);
     return NextResponse.json(
