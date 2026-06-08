@@ -138,7 +138,23 @@ async function getSkinportShopId(client: PrismaClient) {
   return getShopId(client, SKINPORT_SHOP_NAME, SHOP_URLS[SKINPORT_SHOP_NAME]);
 }
 
-export async function syncSkinDatabase(client: PrismaClient = prisma) {
+type SkinSyncPayload = Prisma.SkinCreateManyInput & {
+  marketHashName: string;
+};
+
+type SyncSkinDatabaseOptions = {
+  onProgress?: (message: string) => void;
+};
+
+const SYNC_CREATE_BATCH_SIZE = 1000;
+const SYNC_UPDATE_BATCH_SIZE = 100;
+
+export async function syncSkinDatabase(
+  client: PrismaClient = prisma,
+  options: SyncSkinDatabaseOptions = {}
+) {
+  const progress = options.onProgress;
+  progress?.("Stahuju itemy, historii cen a metadata...");
   const [itemsMap, history, externalSkins, existingSkins] = await Promise.all([
     getSkinportItems(),
     getSkinportHistory(),
@@ -166,7 +182,10 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
     existingSkins.map((skin) => [skin.marketHashName.toLowerCase(), skin])
   );
   const priceChanges: WishlistPriceChange[] = [];
-  let upserted = 0;
+  const createPayloads: SkinSyncPayload[] = [];
+  const updatePayloads: SkinSyncPayload[] = [];
+
+  progress?.(`Zpracovavam ${items.length} polozek ze Skinportu...`);
   for (const item of items) {
     const historyEntry =
       historyMap.get(item.market_hash_name.toLowerCase()) ?? null;
@@ -179,7 +198,7 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
     const maxFloat = external?.maxFloat ?? floats?.max ?? null;
     const imageUrl = external?.imageUrl ?? null;
 
-    const payload = {
+    const payload: SkinSyncPayload = {
       marketHashName: item.market_hash_name,
       weapon: parsed.weapon,
       skin: parsed.skin,
@@ -200,6 +219,12 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
     };
 
     const existing = existingByName.get(item.market_hash_name.toLowerCase());
+    if (existing) {
+      updatePayloads.push(payload);
+    } else {
+      createPayloads.push(payload);
+    }
+
     if (
       existing &&
       existing.id &&
@@ -213,17 +238,45 @@ export async function syncSkinDatabase(client: PrismaClient = prisma) {
         currency: item.currency ?? existing.currency ?? "EUR",
       });
     }
-
-    await client.skin.upsert({
-      where: { marketHashName: item.market_hash_name },
-      update: payload,
-      create: payload,
-    });
-    upserted += 1;
-
   }
 
-  return { total: items.length, upserted, priceChanges };
+  let created = 0;
+  for (let i = 0; i < createPayloads.length; i += SYNC_CREATE_BATCH_SIZE) {
+    const chunk = createPayloads.slice(i, i + SYNC_CREATE_BATCH_SIZE);
+    const result = await client.skin.createMany({
+      data: chunk,
+      skipDuplicates: true,
+    });
+    created += result.count;
+    progress?.(
+      `Vlozeno ${Math.min(i + chunk.length, createPayloads.length)}/${createPayloads.length} novych skinu...`
+    );
+  }
+
+  let updated = 0;
+  for (let i = 0; i < updatePayloads.length; i += SYNC_UPDATE_BATCH_SIZE) {
+    const chunk = updatePayloads.slice(i, i + SYNC_UPDATE_BATCH_SIZE);
+    await client.$transaction(
+      chunk.map((payload) =>
+        client.skin.update({
+          where: { marketHashName: payload.marketHashName },
+          data: payload,
+        })
+      )
+    );
+    updated += chunk.length;
+    progress?.(
+      `Aktualizovano ${Math.min(i + chunk.length, updatePayloads.length)}/${updatePayloads.length} existujicich skinu...`
+    );
+  }
+
+  return {
+    total: items.length,
+    upserted: created + updated,
+    created,
+    updated,
+    priceChanges,
+  };
 }
 
 export async function upsertSkinFromSkinportName(
