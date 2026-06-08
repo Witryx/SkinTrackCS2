@@ -25,10 +25,27 @@ type CacheEntry = {
 
 const cache = new Map<string, CacheEntry>();
 const TTL_MS = 1000 * 60 * 5;
+const CSFLOAT_PRICE_LIST_TTL_MS = 1000 * 60 * 10;
 const REQUEST_TIMEOUT_MS = 4000;
 const DMARKET_SEARCH_URL =
   "https://dmarket.com/ingame-items/item-list/csgo-skins";
 const CSFLOAT_SEARCH_URL = "https://csfloat.com/search";
+const CSFLOAT_PRICE_LIST_URL = "https://csfloat.com/api/v1/listings/price-list";
+
+type CsFloatPriceListItem = {
+  market_hash_name?: string;
+  min_price?: number | string | null;
+  quantity?: number | string | null;
+};
+
+type CsFloatPriceListCache = {
+  fetchedAt: number;
+  data: Map<string, CsFloatPriceListItem>;
+};
+
+let csFloatPriceListCache: CsFloatPriceListCache | null = null;
+let csFloatPriceListPromise: Promise<Map<string, CsFloatPriceListItem> | null> | null =
+  null;
 
 const parseMoney = (value?: string | null) => {
   if (!value) return null;
@@ -80,6 +97,58 @@ const buildDMarketSearchUrl = (marketHashName: string) =>
 
 const buildCsFloatSearchUrl = (marketHashName: string) =>
   `${CSFLOAT_SEARCH_URL}?market_hash_name=${encodeURIComponent(marketHashName)}`;
+
+const fetchCsFloatPriceList = async () => {
+  const now = Date.now();
+  if (
+    csFloatPriceListCache &&
+    now - csFloatPriceListCache.fetchedAt < CSFLOAT_PRICE_LIST_TTL_MS
+  ) {
+    return csFloatPriceListCache.data;
+  }
+
+  if (csFloatPriceListPromise) {
+    return csFloatPriceListPromise;
+  }
+
+  csFloatPriceListPromise = (async () => {
+    try {
+      const res = await fetchWithTimeout(CSFLOAT_PRICE_LIST_URL, {
+        cache: "no-store",
+        timeoutMs: REQUEST_TIMEOUT_MS,
+      });
+      if (!res.ok) {
+        console.warn("CSFloat price-list error", { status: res.status });
+        return null;
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data)) return null;
+
+      const mapped = new Map<string, CsFloatPriceListItem>();
+      for (const item of data) {
+        if (!item || typeof item !== "object") continue;
+        const candidate = item as CsFloatPriceListItem;
+        const name = candidate.market_hash_name?.trim();
+        if (!name) continue;
+        mapped.set(name.toLowerCase(), candidate);
+      }
+
+      csFloatPriceListCache = {
+        fetchedAt: Date.now(),
+        data: mapped,
+      };
+      return mapped;
+    } catch (err) {
+      console.warn("CSFloat price-list request failed", err);
+      return null;
+    } finally {
+      csFloatPriceListPromise = null;
+    }
+  })();
+
+  return csFloatPriceListPromise;
+};
 
 const buildSkinportLookupKey = (marketHashName: string) => {
   const parsed = parseMarketHashName(marketHashName);
@@ -262,6 +331,24 @@ const fetchSteamMarket = async (marketHashName: string): Promise<ShopPrice> => {
 
 const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
   const searchUrl = buildCsFloatSearchUrl(marketHashName);
+  const priceList = await fetchCsFloatPriceList();
+  const priceListItem = priceList?.get(marketHashName.trim().toLowerCase());
+  const priceListPrice = normalizeMinorUnitPrice(priceListItem?.min_price);
+
+  if (priceListPrice !== null) {
+    return {
+      id: "csfloat",
+      label: "CSFloat",
+      price: priceListPrice,
+      currency: "USD",
+      note:
+        parseNumeric(priceListItem?.quantity) !== null
+          ? `Lowest listing / ${parseNumeric(priceListItem?.quantity)} active`
+          : "Lowest listing",
+      url: searchUrl,
+    };
+  }
+
   const params = new URLSearchParams({
     market_hash_name: marketHashName,
     sort_by: "lowest_price",
@@ -279,7 +366,9 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
       label: "CSFloat",
       price: null,
       currency: "EUR",
-      note: "Vyzaduje API key nebo login",
+      note: priceList
+        ? "Neni v CSFloat price-listu"
+        : "Price-list nedostupny / chybi API key",
       url: searchUrl,
     };
   }
