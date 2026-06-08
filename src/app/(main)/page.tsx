@@ -35,7 +35,7 @@ export default async function HomePage() {
   let data: TrendingData | null = null;
   let source: "db" | "local" | "none" = "db";
 
-  const dbData = await withTimeout(getTrendingSkinsFromDb(), 250, null);
+  const dbData = await withTimeout(getTrendingSkinsFromDb(), 3500, null);
   if (dbData?.featured.length) {
     data = dbData;
   }

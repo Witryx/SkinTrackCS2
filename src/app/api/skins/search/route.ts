@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       tradable,
     };
 
-    const dbItems = await withTimeout(searchSkinsDb(baseFilters), 250, null);
+    const dbItems = await withTimeout(searchSkinsDb(baseFilters), 3500, null);
     if (Array.isArray(dbItems) && dbItems.length) {
       return NextResponse.json({ items: dbItems, source: "db" });
     }

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   const dbItems = await withTimeout(
     searchSkinsDb({ limit, sort: "volume" }),
-    250,
+    3500,
     null
   );
   if (Array.isArray(dbItems) && dbItems.length) {

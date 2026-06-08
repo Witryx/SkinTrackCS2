@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
 export default async function SkinDetailPage({ params }: PageProps) {
   const decodedName = decodeURIComponent(params.name);
   const [dbData, localData] = await Promise.all([
-    withTimeout(getSkinFromDb(decodedName), 250, null),
+    withTimeout(getSkinFromDb(decodedName), 3500, null),
     getSkinDetailLocal(decodedName).catch(() => null),
   ]);
   const shouldFetchLive = !dbData && !localData;
@@ -45,7 +45,7 @@ export default async function SkinDetailPage({ params }: PageProps) {
   }
 
   const historyName = resolvedData.name;
-  const history = await withTimeout(getSkinPriceHistory(historyName, 90), 250, {
+  const history = await withTimeout(getSkinPriceHistory(historyName, 90), 3500, {
     points: [],
     currency: "EUR",
   });
