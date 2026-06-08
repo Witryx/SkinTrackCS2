@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSiteUrl } from "@/app/lib/site-url";
 import { prisma } from "../../../lib/prisma";
 import { getSteamUser } from "../../../lib/getSteamUser";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 const openidEndpoint = "https://steamcommunity.com/openid/login";
 
 export async function GET(req: NextRequest) {
+  const siteUrl = getSiteUrl();
   const url = req.nextUrl;
 
   const mode = url.searchParams.get("openid.mode");
