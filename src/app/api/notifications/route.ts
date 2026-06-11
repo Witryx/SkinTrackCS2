@@ -65,26 +65,31 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const user = await prisma.user.findUnique({
-    where: { steamId },
-    select: { id: true },
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { steamId },
+      select: { id: true },
+    });
 
-  if (!user) {
+    if (!user) {
+      return NextResponse.json({ notifications: [], unreadCount: 0 });
+    }
+
+    const [notifications, unreadCount] = await Promise.all([
+      fetchNotifications(user.id, limit),
+      prisma.notification.count({
+        where: { userId: user.id, readAt: null },
+      }),
+    ]);
+
+    return NextResponse.json({
+      notifications: notifications.map(mapNotification),
+      unreadCount,
+    });
+  } catch (error) {
+    console.error("Notifications fetch failed", error);
     return NextResponse.json({ notifications: [], unreadCount: 0 });
   }
-
-  const [notifications, unreadCount] = await Promise.all([
-    fetchNotifications(user.id, limit),
-    prisma.notification.count({
-      where: { userId: user.id, readAt: null },
-    }),
-  ]);
-
-  return NextResponse.json({
-    notifications: notifications.map(mapNotification),
-    unreadCount,
-  });
 }
 
 export async function PATCH(req: NextRequest) {
