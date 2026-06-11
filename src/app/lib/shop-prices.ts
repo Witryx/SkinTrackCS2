@@ -235,7 +235,7 @@ const normalizeShopToEur = async (shop: ShopPrice): Promise<ShopPrice> => {
   if (converted === null) {
     return {
       ...shop,
-      note: joinNotes(shop.note, `Kurz ${originalCurrency}->EUR nedostupny`),
+      note: joinNotes(shop.note, `Kurz ${originalCurrency}->EUR nedostupný`),
     };
   }
 
@@ -245,7 +245,7 @@ const normalizeShopToEur = async (shop: ShopPrice): Promise<ShopPrice> => {
     currency: "EUR",
     originalPrice: shop.price,
     originalCurrency,
-    note: joinNotes(shop.note, `Prevedeno z ${originalCurrency}`),
+    note: joinNotes(shop.note, `Převedeno z ${originalCurrency}`),
   };
 };
 
@@ -288,7 +288,7 @@ const fetchSkinport = async (marketHashName: string): Promise<ShopPrice> => {
       label: "Skinport",
       price: null,
       currency: "EUR",
-      note: "Nedostupne",
+      note: "Nedostupné",
       url: "https://skinport.com",
     };
   }
@@ -321,7 +321,7 @@ const fetchSteamMarket = async (marketHashName: string): Promise<ShopPrice> => {
       label: "Steam Market",
       price: null,
       currency: "EUR",
-      note: "Nedostupne / rate limit",
+      note: "Nedostupné / rate limit",
       url: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(
         marketHashName
       )}`,
@@ -386,7 +386,7 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
         note:
           res.status === 403
             ? "Vyzaduje API key nebo login"
-            : `Nedostupne (${res.status})`,
+            : `Nedostupné (${res.status})`,
         url: searchUrl,
       };
     }
@@ -426,7 +426,7 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
       label: "CSFloat",
       price: null,
       currency: "EUR",
-      note: "Nedostupne",
+      note: "Nedostupné",
       url: searchUrl,
     };
   }
@@ -538,7 +538,7 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
         label: "DMarket",
         price: null,
         currency: "EUR",
-        note: `Nedostupne (${res.status})`,
+        note: `Nedostupné (${res.status})`,
         url: searchUrl,
       };
     }
@@ -572,7 +572,7 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       label: "DMarket",
       price: null,
       currency: "EUR",
-      note: "Nedostupne / chybi prava",
+      note: "Nedostupné / chybí práva",
       url: searchUrl,
     };
   }

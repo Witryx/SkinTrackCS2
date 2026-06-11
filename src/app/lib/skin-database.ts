@@ -679,10 +679,14 @@ export async function recordShopPriceHistory(
   if (!model) return { inserted: 0 };
 
   try {
-    const skin = await client.skin.findUnique({
+    let skin = await client.skin.findUnique({
       where: { marketHashName },
       select: { id: true },
     });
+    if (!skin) {
+      const created = await upsertSkinFromSkinportName(marketHashName, client);
+      skin = created ? { id: created.id } : null;
+    }
     if (!skin) return { inserted: 0 };
 
     const hasNumericPrice = (

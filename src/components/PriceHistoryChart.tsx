@@ -139,16 +139,6 @@ export default function PriceHistoryChart({
     return sorted.filter((point) => toDate(point.date) >= windowStart);
   }, [sorted, windowStart]);
 
-  const chartData = useMemo(() => {
-    if (filtered.length !== 1 || !windowStart) return filtered;
-    const only = filtered[0];
-    const ghostDate = windowStart.toISOString();
-    return [
-      { date: ghostDate, price: only.price },
-      only,
-    ];
-  }, [filtered, windowStart]);
-
   const currencyFormatter = useMemo(
     () =>
       new Intl.NumberFormat("cs-CZ", {
@@ -215,7 +205,9 @@ export default function PriceHistoryChart({
 
   const hasData = filtered.length > 0;
   const isSinglePoint = filtered.length === 1;
+  const hasChartData = filtered.length > 1;
   const lastPointDate = hasData ? filtered.at(-1)?.date ?? null : null;
+  const singlePoint = isSinglePoint ? filtered[0] : null;
   const spanMs =
     filtered.length > 1
       ? toDate(filtered[filtered.length - 1].date).getTime() -
@@ -280,10 +272,28 @@ export default function PriceHistoryChart({
         </div>
       )}
 
-      {hasData && (
+      {isSinglePoint && singlePoint && (
+        <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5">
+          <div className="text-xs font-semibold uppercase text-[color:var(--muted)]">
+            První uložený snapshot
+          </div>
+          <div className="mt-2 text-3xl font-black">
+            {currencyFormatter.format(singlePoint.price)}
+          </div>
+          <div className="mt-1 text-sm text-[color:var(--muted)]">
+            {dateTimeFormatter.format(toDate(singlePoint.date))}
+          </div>
+          <div className="mt-4 text-xs leading-5 text-[color:var(--muted)]">
+            Graf se začne kreslit po dalším uloženém snapshotu. Historie se doplňuje
+            přes cron a při načtení live nabídek.
+          </div>
+        </div>
+      )}
+
+      {hasChartData && (
         <div className="h-64 rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-3">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 18, left: 0, bottom: 0 }}>
+            <AreaChart data={filtered} margin={{ top: 10, right: 18, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35} />
@@ -348,13 +358,6 @@ export default function PriceHistoryChart({
           </ResponsiveContainer>
         </div>
       )}
-      {isSinglePoint && (
-        <div className="text-xs text-[color:var(--muted)]">
-          Zatím je k dispozici jen 1 záznam. Graf bude přesnější, jakmile se uloží
-          více dní.
-        </div>
-      )}
-
       <div className="grid gap-3 md:grid-cols-3">
         <div className="stat-tile text-sm">
           <div className="text-[color:var(--muted)]">Minimum</div>

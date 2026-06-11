@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const history = await getSkinPriceHistory(name, days);
     return NextResponse.json(history, {
       headers: {
-        "Cache-Control": "s-maxage=60, stale-while-revalidate=180",
+        "Cache-Control": "no-store",
       },
     });
   } catch (error) {

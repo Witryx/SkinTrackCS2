@@ -39,6 +39,7 @@ export default function WishlistPage() {
   const [email, setEmail] = useState("");
   const [emailDraft, setEmailDraft] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updatingAlertKey, setUpdatingAlertKey] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -166,6 +167,39 @@ export default function WishlistPage() {
     } catch (error) {
       console.error("Wishlist remove failed", error);
       setStatus("Skin se nepodařilo odebrat.");
+    }
+  };
+
+  const sendTestEmail = async () => {
+    if (!steamId) return;
+    if (!email) {
+      setStatus("Nejdřív ulož e-mail pro alerty.");
+      return;
+    }
+
+    setSendingTestEmail(true);
+    setStatus(null);
+
+    try {
+      const response = await fetch("/api/wishlist/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ steamId }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(body?.error ?? "Test e-mail failed");
+      }
+      setStatus("Testovací e-mail byl odeslán.");
+    } catch (error) {
+      console.error("Wishlist test e-mail failed", error);
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Testovací e-mail se nepodařilo odeslat."
+      );
+    } finally {
+      setSendingTestEmail(false);
     }
   };
 
@@ -314,6 +348,7 @@ export default function WishlistPage() {
             </div>
             <p className="mt-1 text-xs text-[color:var(--muted)]">
               Kontakt se ukládá šifrovaně a používá se jen pro cenové alerty.
+              Alert se pošle až při další uložené změně ceny.
             </p>
           </div>
           <form
@@ -334,6 +369,14 @@ export default function WishlistPage() {
               className="btn-primary min-w-28 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {savingEmail ? "Ukládám..." : "Uložit"}
+            </button>
+            <button
+              type="button"
+              onClick={sendTestEmail}
+              disabled={sendingTestEmail || savingEmail || !email}
+              className="btn-ghost min-w-32 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {sendingTestEmail ? "Odesílám..." : "Poslat test"}
             </button>
           </form>
         </div>
