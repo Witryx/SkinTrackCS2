@@ -23,9 +23,9 @@ type Props = {
 
 const periods = [
   { id: "24h", label: "24h", amount: 24, unit: "hour" },
-  { id: "7d", label: "7 dni", amount: 7, unit: "day" },
-  { id: "30d", label: "30 dni", amount: 30, unit: "day" },
-  { id: "90d", label: "90 dni", amount: 90, unit: "day" },
+  { id: "7d", label: "7 dní", amount: 7, unit: "day" },
+  { id: "30d", label: "30 dní", amount: 30, unit: "day" },
+  { id: "90d", label: "90 dní", amount: 90, unit: "day" },
 ] as const;
 
 const toDate = (value: string) =>
@@ -87,7 +87,7 @@ export default function PriceHistoryChart({
         .catch((error) => {
           if (error.name === "AbortError") return;
           console.error("Price history fetch failed", error);
-          setHistoryError("Graf se nepodarilo nacist.");
+          setHistoryError("Graf se nepodařilo načíst.");
         })
         .finally(() => {
           if (!currentController.signal.aborted) {
@@ -241,12 +241,12 @@ export default function PriceHistoryChart({
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="kicker">Graf nejlevnejsi ceny</div>
+          <div className="kicker">Graf nejlevnější ceny</div>
           <h3 className="text-xl font-semibold">Lowest live market price</h3>
           {lastPointDate && (
             <div className="text-xs text-[color:var(--muted)]">
-              Posledni snapshot {dateTimeFormatter.format(toDate(lastPointDate))} /{" "}
-              {filtered.length} bodu
+              Poslední snapshot {dateTimeFormatter.format(toDate(lastPointDate))} /{" "}
+              {filtered.length} bodů
             </div>
           )}
         </div>
@@ -274,9 +274,9 @@ export default function PriceHistoryChart({
       {!hasData && (
         <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-6 text-sm text-[color:var(--muted)]">
           {loadingHistory
-            ? "Nacitam historii ceny..."
+            ? "Načítám historii ceny..."
             : historyError ??
-              "Zatim nejsou zadna historicka data nejlevnejsi live ceny. Graf se zacne plnit po dalsich live updatech marketu."}
+              "Zatím nejsou žádná historická data nejlevnější live ceny. Graf se začne plnit po dalších live updatech marketu."}
         </div>
       )}
 
@@ -350,8 +350,8 @@ export default function PriceHistoryChart({
       )}
       {isSinglePoint && (
         <div className="text-xs text-[color:var(--muted)]">
-          Zatim je k dispozici jen 1 zaznam. Graf bude presnejsi, jakmile se ulozi
-          vice dni.
+          Zatím je k dispozici jen 1 záznam. Graf bude přesnější, jakmile se uloží
+          více dní.
         </div>
       )}
 
@@ -369,7 +369,7 @@ export default function PriceHistoryChart({
           </div>
         </div>
         <div className="stat-tile text-sm">
-          <div className="text-[color:var(--muted)]">Zmena</div>
+          <div className="text-[color:var(--muted)]">Změna</div>
           <div
             className={`text-lg font-semibold ${
               change === null

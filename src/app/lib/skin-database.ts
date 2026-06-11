@@ -185,7 +185,7 @@ export async function syncSkinDatabase(
   const createPayloads: SkinSyncPayload[] = [];
   const updatePayloads: SkinSyncPayload[] = [];
 
-  progress?.(`Zpracovavam ${items.length} polozek ze Skinportu...`);
+  progress?.(`Zpracovávám ${items.length} položek ze Skinportu...`);
   for (const item of items) {
     const historyEntry =
       historyMap.get(item.market_hash_name.toLowerCase()) ?? null;
@@ -249,7 +249,7 @@ export async function syncSkinDatabase(
     });
     created += result.count;
     progress?.(
-      `Vlozeno ${Math.min(i + chunk.length, createPayloads.length)}/${createPayloads.length} novych skinu...`
+      `Vloženo ${Math.min(i + chunk.length, createPayloads.length)}/${createPayloads.length} nových skinů...`
     );
   }
 
@@ -266,7 +266,7 @@ export async function syncSkinDatabase(
     );
     updated += chunk.length;
     progress?.(
-      `Aktualizovano ${Math.min(i + chunk.length, updatePayloads.length)}/${updatePayloads.length} existujicich skinu...`
+      `Aktualizováno ${Math.min(i + chunk.length, updatePayloads.length)}/${updatePayloads.length} existujících skinů...`
     );
   }
 

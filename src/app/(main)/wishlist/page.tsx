@@ -94,7 +94,7 @@ export default function WishlistPage() {
       setEmailDraft(nextEmail);
     } catch (error) {
       console.error("Wishlist fetch failed", error);
-      setStatus("Wishlist se nepodarilo nacist.");
+      setStatus("Wishlist se nepodařilo načíst.");
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export default function WishlistPage() {
 
     const nextEmail = emailDraft.trim();
     if (nextEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
-      setStatus("Zadej platny e-mail.");
+      setStatus("Zadej platný e-mail.");
       return;
     }
 
@@ -132,13 +132,13 @@ export default function WishlistPage() {
       setEmailDraft(savedEmail);
       setStatus(
         savedEmail
-          ? "E-mail pro alerty byl ulozen sifrovane."
-          : "E-mail pro alerty byl odebran."
+          ? "E-mail pro alerty byl uložen šifrovaně."
+          : "E-mail pro alerty byl odebrán."
       );
     } catch (error) {
       console.error("Wishlist e-mail update failed", error);
       setStatus(
-        error instanceof Error ? error.message : "E-mail se nepodarilo ulozit."
+        error instanceof Error ? error.message : "E-mail se nepodařilo uložit."
       );
     } finally {
       setSavingEmail(false);
@@ -165,7 +165,7 @@ export default function WishlistPage() {
       );
     } catch (error) {
       console.error("Wishlist remove failed", error);
-      setStatus("Skin se nepodarilo odebrat.");
+      setStatus("Skin se nepodařilo odebrat.");
     }
   };
 
@@ -176,7 +176,7 @@ export default function WishlistPage() {
   ) => {
     if (!steamId) return;
     if (setting === "emailAlertsEnabled" && enabled && !email) {
-      setStatus("Nejdriv uloz e-mail pro alerty.");
+      setStatus("Nejdřív ulož e-mail pro alerty.");
       return;
     }
 
@@ -223,7 +223,7 @@ export default function WishlistPage() {
     } catch (error) {
       console.error("Wishlist alert update failed", error);
       setItems(previousItems);
-      setStatus("Alert se nepodarilo ulozit.");
+      setStatus("Alert se nepodařilo uložit.");
     } finally {
       setUpdatingAlertKey(null);
     }
@@ -272,16 +272,16 @@ export default function WishlistPage() {
       <section className="container-max py-10">
         <div className="card p-8">
           <div className="kicker">Wishlist</div>
-          <h1 className="display mt-2 text-3xl">Prihlaseni pres Steam</h1>
+          <h1 className="display mt-2 text-3xl">Přihlášení přes Steam</h1>
           <p className="mt-3 text-sm text-[color:var(--muted)]">
-            Wishlist je vazany na Steam ucet.
+            Wishlist je vázaný na Steam účet.
           </p>
           <button
             type="button"
             onClick={() => (window.location.href = "/api/steam/login")}
             className="btn-primary mt-5"
           >
-            Prihlasit pres Steam
+            Přihlásit přes Steam
           </button>
         </div>
       </section>
@@ -294,14 +294,14 @@ export default function WishlistPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="kicker">Wishlist</div>
-          <h1 className="display text-4xl">Sledovane skiny</h1>
+          <h1 className="display text-4xl">Sledované skiny</h1>
           <p className="mt-2 text-sm text-[color:var(--muted)]">
-            U kazdeho skinu muzes zvlast zapnout oznameni do zvonecku a e-mail.
+            U každého skinu můžeš zvlášť zapnout oznámení do zvonečku a e-mail.
           </p>
         </div>
         <div className="stat-tile min-w-32 text-center text-sm text-[color:var(--muted)]">
           <div className="text-3xl font-black text-[color:var(--fg)]">{items.length}</div>
-          {items.length} skinu
+          {items.length} skinů
         </div>
         </div>
       </div>
@@ -313,7 +313,7 @@ export default function WishlistPage() {
               E-mail pro alerty
             </div>
             <p className="mt-1 text-xs text-[color:var(--muted)]">
-              Kontakt se uklada sifrovane a pouziva se jen pro cenove alerty.
+              Kontakt se ukládá šifrovaně a používá se jen pro cenové alerty.
             </p>
           </div>
           <form
@@ -333,7 +333,7 @@ export default function WishlistPage() {
               disabled={savingEmail || emailDraft.trim() === email}
               className="btn-primary min-w-28 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {savingEmail ? "Ukladam..." : "Ulozit"}
+              {savingEmail ? "Ukládám..." : "Uložit"}
             </button>
           </form>
         </div>
@@ -347,13 +347,13 @@ export default function WishlistPage() {
 
       {loading && (
         <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-6 py-10 text-center text-sm text-[color:var(--muted)]">
-          Nacitam wishlist...
+          Načítám wishlist...
         </div>
       )}
 
       {!loading && !items.length && (
         <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-6 py-10 text-center text-sm text-[color:var(--muted)]">
-          Zatim nemas ve wishlistu zadny skin.
+          Zatím nemáš ve wishlistu žádný skin.
         </div>
       )}
 

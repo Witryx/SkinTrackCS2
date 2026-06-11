@@ -64,7 +64,7 @@ export async function processWishlistPriceChanges(
     const direction = change.currentPrice >= change.previousPrice ? "UP" : "DOWN";
     const directionLabel = direction === "UP" ? "vzrostla" : "klesla";
     const title = `Cena ${directionLabel}: ${favorite.skin.marketHashName}`;
-    const message = `Cena se zmenila o ${formatPercent(changePercent)}.`;
+    const message = `Cena se změnila o ${formatPercent(changePercent)}.`;
 
     const notification = favorite.alertsEnabled
       ? await client.notification.create({

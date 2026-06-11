@@ -82,8 +82,8 @@ export default async function HomePage() {
                     SkinTrack CS2
                   </h1>
                   <p className="max-w-xl text-base leading-7 text-[color:var(--muted)] sm:text-lg">
-                    Moderni dashboard pro ceny, trendy a wishlist CS2 skinu.
-                    Rychle najdes skin, porovnas nabidky a uvidis, co se na trhu hybe.
+                    Moderní dashboard pro ceny, trendy a wishlist CS2 skinů.
+                    Rychle najdeš skin, porovnáš nabídky a uvidíš, co se na trhu hýbe.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -92,7 +92,7 @@ export default async function HomePage() {
                       <circle cx="11" cy="11" r="7" />
                       <path d="m16.5 16.5 4 4" />
                     </svg>
-                    Otevrit Explorer
+                    Otevřít Explorer
                   </Link>
                   <a href="#trendy" className="btn-ghost">
                     Zobrazit trendy
@@ -102,7 +102,7 @@ export default async function HomePage() {
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="stat-tile">
-                  <div className="text-xs text-[color:var(--muted)]">Monitorovano</div>
+                  <div className="text-xs text-[color:var(--muted)]">Monitorováno</div>
                   <div className="mt-1 text-2xl font-black">{visibleItems.length}</div>
                 </div>
                 <div className="stat-tile">
@@ -125,7 +125,7 @@ export default async function HomePage() {
                 <>
                   <div className="absolute inset-x-0 bottom-0 rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-5 shadow-[var(--shadow)]">
                     <div className="mb-2 flex items-center justify-between text-xs text-[color:var(--muted)]">
-                      <span>Highlight tydne</span>
+                      <span>Highlight týdne</span>
                       <span>{highlight.volume7d?.toLocaleString("cs-CZ") ?? "-"} sales</span>
                     </div>
                     <div className="text-2xl font-black leading-tight">{highlight.weapon}</div>
@@ -152,14 +152,14 @@ export default async function HomePage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="kicker">Live highlight</div>
-              <h2 className="mt-1 text-xl font-black">Nejvyraznejsi skin</h2>
+              <h2 className="mt-1 text-xl font-black">Nejvýraznější skin</h2>
             </div>
             <span className="text-xs text-[color:var(--muted)]">Sales/history</span>
           </div>
 
           {!highlight && (
             <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-4 py-6 text-sm text-[color:var(--muted)]">
-              Nepodarilo se nacist data ze Skinport API.
+              Nepodařilo se načíst data ze Skinport API.
             </div>
           )}
 
@@ -186,13 +186,13 @@ export default async function HomePage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="kicker">Trending</div>
-            <h2 className="display text-3xl">Top 3 itemy tydne</h2>
+            <h2 className="display text-3xl">Top 3 itemy týdne</h2>
           </div>
           <span className="text-sm text-[color:var(--muted)]">Sales/history</span>
         </div>
         {!data && (
           <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-4 py-3 text-sm text-[color:var(--muted)]">
-            Nepodarilo se nacist trendy z Skinport API.
+            Nepodařilo se načíst trendy ze Skinport API.
           </div>
         )}
         {data && (
@@ -222,10 +222,10 @@ export default async function HomePage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="kicker">Market watchlist</div>
-            <h2 className="display text-3xl">Dalsi trendy skiny</h2>
+            <h2 className="display text-3xl">Další trendy skiny</h2>
           </div>
           <Link href="/explorer" className="text-sm font-semibold text-[color:var(--accent)] hover:underline">
-            Rozsirene hledani
+            Rozšířené hledání
           </Link>
         </div>
         {data && (

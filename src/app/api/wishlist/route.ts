@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
 
   if (!skin) {
     return NextResponse.json(
-      { error: "Skin se nepodarilo najit v databazi." },
+      { error: "Skin se nepodařilo najít v databázi." },
       { status: 404 }
     );
   }
@@ -156,13 +156,13 @@ export async function PATCH(req: NextRequest) {
 
   const user = await prisma.user.findUnique({ where: { steamId } });
   if (!user) {
-    return NextResponse.json({ error: "Uzivatel nebyl nalezen." }, { status: 404 });
+    return NextResponse.json({ error: "Uživatel nebyl nalezen." }, { status: 404 });
   }
 
   if (body && Object.prototype.hasOwnProperty.call(body, "email")) {
     const email = parseNotificationEmail(body.email);
     if (email === null) {
-      return NextResponse.json({ error: "Neplatny e-mail." }, { status: 400 });
+      return NextResponse.json({ error: "Neplatný e-mail." }, { status: 400 });
     }
 
     try {
@@ -181,14 +181,14 @@ export async function PATCH(req: NextRequest) {
         error.code === "P2002"
       ) {
         return NextResponse.json(
-          { error: "Tento e-mail uz pouziva jiny ucet." },
+          { error: "Tento e-mail už používá jiný účet." },
           { status: 409 }
         );
       }
 
       console.error("Encrypted e-mail update failed", error);
       return NextResponse.json(
-        { error: "E-mail se nepodarilo ulozit." },
+        { error: "E-mail se nepodařilo uložit." },
         { status: 500 }
       );
     }
@@ -218,7 +218,7 @@ export async function PATCH(req: NextRequest) {
 
   if (!Object.keys(data).length) {
     return NextResponse.json(
-      { error: "Neplatna hodnota nastaveni alertu." },
+      { error: "Neplatná hodnota nastavení alertů." },
       { status: 400 }
     );
   }
@@ -234,7 +234,7 @@ export async function PATCH(req: NextRequest) {
   });
   if (!existing) {
     return NextResponse.json(
-      { error: "Skin neni ve wishlistu." },
+      { error: "Skin není ve wishlistu." },
       { status: 404 }
     );
   }

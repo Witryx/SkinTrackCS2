@@ -130,7 +130,7 @@ const useShopPrices = (marketHashName: string) => {
       .catch((fetchError) => {
         if (cancelled) return;
         console.error("Shop prices client fetch failed", fetchError);
-        setError("Live ceny se nepodarilo nacist.");
+        setError("Live ceny se nepodařilo načíst.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -167,10 +167,10 @@ export default function SkinLiveMarketPanel({
 
   const headlinePrice = bestLiveShop?.price ?? initialPrice ?? null;
   const headlinePriceLabel = bestLiveShop
-    ? `Nejlevnejsi live (${bestLiveShop.label})`
+    ? `Nejlevnější live (${bestLiveShop.label})`
     : loading
-      ? "Nacitam live cenu"
-      : "Aktualni cena";
+      ? "Načítám live cenu"
+      : "Aktuální cena";
   const cheapestOfferUrl = bestLiveShop?.url ?? marketPage ?? itemPage ?? null;
   const isSkinport = itemPage?.includes("skinport.com") ?? false;
 
@@ -210,11 +210,11 @@ export default function SkinLiveMarketPanel({
             rel="noreferrer"
             className="btn-primary"
           >
-            Otevrit nejlevnejsi nabidku
+            Otevřít nejlevnější nabídku
           </a>
         )}
         <SmoothScrollButton targetId="shop-offers" className="btn-ghost">
-          Zobrazit dalsi nabidky
+          Zobrazit další nabídky
         </SmoothScrollButton>
         {itemPage && (
           <a
@@ -234,11 +234,11 @@ export default function SkinLiveMarketPanel({
     <div id="shop-offers" className="scroll-mt-24 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="kicker">Porovnani shopu</div>
-          <h3 className="text-xl font-semibold">Ceny na trzistich</h3>
+          <div className="kicker">Porovnání shopů</div>
+          <h3 className="text-xl font-semibold">Ceny na tržištích</h3>
         </div>
         <span className="text-xs text-[color:var(--muted)]">
-          {loading ? "nacitam..." : "live / EUR"}
+          {loading ? "načítám..." : "live / EUR"}
         </span>
       </div>
 
@@ -250,13 +250,13 @@ export default function SkinLiveMarketPanel({
 
       {loading && (
         <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-6 text-sm text-[color:var(--muted)]">
-          Nacitam live ceny z marketu...
+          Načítám live ceny z marketu...
         </div>
       )}
 
       {!loading && !shopPrices.length && (
         <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-6 text-sm text-[color:var(--muted)]">
-          Ceny se nepodarilo nacist.
+          Ceny se nepodařilo načíst.
         </div>
       )}
 
@@ -280,7 +280,7 @@ export default function SkinLiveMarketPanel({
                 shop.originalCurrency &&
                 shop.originalCurrency !== shop.currency && (
                   <div className="text-xs text-[color:var(--muted)]">
-                    puvodne{" "}
+                    původně{" "}
                     {formatShopMoney(shop.originalPrice, shop.originalCurrency)}
                   </div>
                 )}
@@ -296,7 +296,7 @@ export default function SkinLiveMarketPanel({
                   rel="noreferrer"
                   className="mt-2 inline-block text-xs text-[color:var(--accent-2)] hover:underline"
                 >
-                  Otevrit shop
+                  Otevřít shop
                 </a>
               )}
             </div>

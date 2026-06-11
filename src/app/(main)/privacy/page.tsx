@@ -1,38 +1,38 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Podminky a privacy policy | SkinTrack CS2",
-  description: "Podminky pouzivani a ochrana soukromi aplikace SkinTrack CS2.",
+  title: "Podmínky a privacy policy | SkinTrack CS2",
+  description: "Podmínky používání a ochrana soukromí aplikace SkinTrack CS2.",
 };
 
 const sections = [
   {
-    title: "1. Ucel aplikace",
-    body: "SkinTrack CS2 je skolni webova aplikace pro sledovani cen, trendu, wishlistu a upozorneni u CS2 skinu. Data z externich marketu slouzi pouze k informativnimu porovnani.",
+    title: "1. Účel aplikace",
+    body: "SkinTrack CS2 je školní webová aplikace pro sledování cen, trendů, wishlistu a upozornění u CS2 skinů. Data z externích marketů slouží pouze k informativnímu porovnání.",
   },
   {
-    title: "2. Ukladana data",
-    body: "Aplikace uklada SteamID, verejne udaje ze Steam profilu, wishlist, nastaveni alertu, cenovou historii, notifikace a volitelny e-mail pro cenove alerty.",
+    title: "2. Ukládaná data",
+    body: "Aplikace ukládá SteamID, veřejné údaje ze Steam profilu, wishlist, nastavení alertů, cenovou historii, notifikace a volitelný e-mail pro cenové alerty.",
   },
   {
-    title: "3. Ochrana citlivych udaju",
-    body: "Tajne API klice jsou ulozene v promennych prostredi mimo zdrojovy kod. E-mail pro alerty se uklada sifrovane pomoci AES-256-GCM a pro kontrolu duplicity se pouziva pouze HMAC hash.",
+    title: "3. Ochrana citlivých údajů",
+    body: "Tajné API klíče jsou uložené v proměnných prostředí mimo zdrojový kód. E-mail pro alerty se ukládá šifrovaně pomocí AES-256-GCM a pro kontrolu duplicity se používá pouze HMAC hash.",
   },
   {
-    title: "4. Lokalne ulozena data",
-    body: "Frontend uklada do localStorage SteamID a preferenci motivu, aby zustalo prihlaseni a vzhled zachovane mezi navstevami ve stejnem prohlizeci.",
+    title: "4. Lokálně uložená data",
+    body: "Frontend ukládá do localStorage SteamID a preferenci motivu, aby zůstalo přihlášení a vzhled zachované mezi návštěvami ve stejném prohlížeči.",
   },
   {
-    title: "5. Externi sluzby",
-    body: "Aplikace komunikuje se Steamem, Skinportem a podle konfigurace take s CSFloat, DMarketem a e-mailovou sluzbou Resend. Tyto sluzby mohou zpracovavat pozadavky podle vlastnich pravidel.",
+    title: "5. Externí služby",
+    body: "Aplikace komunikuje se Steamem, Skinportem a podle konfigurace také s CSFloat, DMarketem a e-mailovou službou Resend. Tyto služby mohou zpracovávat požadavky podle vlastních pravidel.",
   },
   {
-    title: "6. Omezeni odpovednosti",
-    body: "Ceny a dostupnost skinu se rychle meni. SkinTrack CS2 negarantuje presnost dat a neslouzi jako financni doporuceni ani zavazna nabidka.",
+    title: "6. Omezení odpovědnosti",
+    body: "Ceny a dostupnost skinů se rychle mění. SkinTrack CS2 negarantuje přesnost dat a neslouží jako finanční doporučení ani závazná nabídka.",
   },
   {
-    title: "7. Smazani dat",
-    body: "Uzivatel muze odebrat polozky z wishlistu a smazat e-mail pro alerty. Pro smazani uctu nebo export dat kontaktujte spravce projektu.",
+    title: "7. Smazání dat",
+    body: "Uživatel může odebrat položky z wishlistu a smazat e-mail pro alerty. Pro smazání účtu nebo export dat kontaktujte správce projektu.",
   },
 ];
 
@@ -43,10 +43,10 @@ export default function PrivacyPage() {
         <div className="max-w-3xl">
           <div className="kicker">Privacy policy</div>
           <h1 className="display mt-2 text-4xl leading-tight sm:text-5xl">
-            Podminky pouzivani a ochrana soukromi
+            Podmínky používání a ochrana soukromí
           </h1>
           <p className="mt-4 text-sm leading-6 text-[color:var(--muted)] sm:text-base">
-            Platne pro aplikaci SkinTrack CS2. Posledni aktualizace: 6. 6. 2026.
+            Platné pro aplikaci SkinTrack CS2. Poslední aktualizace: 6. 6. 2026.
           </p>
         </div>
       </div>

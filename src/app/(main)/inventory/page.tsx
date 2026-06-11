@@ -112,13 +112,13 @@ const categoryBadgeClass: Record<Exclude<Category, "Normal">, string> = {
 };
 
 const sortOptions: Array<{ value: SortMode; label: string }> = [
-  { value: "most-recent", label: "Most Recent" },
-  { value: "most-expensive", label: "Most Expensive" },
-  { value: "cheapest", label: "Cheapest" },
-  { value: "highest-float", label: "Highest Float" },
-  { value: "lowest-float", label: "Lowest Float" },
-  { value: "highest-rarity", label: "Highest Rarity" },
-  { value: "lowest-rarity", label: "Lowest Rarity" },
+  { value: "most-recent", label: "Nejnovější" },
+  { value: "most-expensive", label: "Nejdražší" },
+  { value: "cheapest", label: "Nejlevnější" },
+  { value: "highest-float", label: "Nejvyšší float" },
+  { value: "lowest-float", label: "Nejnižší float" },
+  { value: "highest-rarity", label: "Nejvyšší rarita" },
+  { value: "lowest-rarity", label: "Nejnižší rarita" },
 ];
 
 const wearRanges: Record<WearName, { min: number; max: number; short: string }> = {
@@ -270,7 +270,7 @@ const getPriceSourceLabel = (
 ) => {
   if (!source || source === "missing") return "Bez ceny";
   if (source === "db" || source === "db-normalized") {
-    return stale ? "DB cache (stara)" : "DB cache";
+    return stale ? "DB cache (stará)" : "DB cache";
   }
   if (source === "db-stale") return "DB fallback";
   if (source === "skinport" || source === "skinport-normalized") {
@@ -380,7 +380,7 @@ export default function InventoryPage() {
       })
       .catch((err) => {
         if (err.name === "AbortError") return;
-        setError(err.message ?? "Nepodarilo se nacist inventar.");
+        setError(err.message ?? "Nepodařilo se načíst inventář.");
       })
       .finally(() => setLoading(false));
 
@@ -421,7 +421,7 @@ export default function InventoryPage() {
       })
       .catch((err) => {
         if (err.name === "AbortError") return;
-        setPriceError(err.message ?? "Nepodarilo se nacist ceny.");
+        setPriceError(err.message ?? "Nepodařilo se načíst ceny.");
       })
       .finally(() => setPriceLoading(false));
 
@@ -695,7 +695,7 @@ export default function InventoryPage() {
       .catch((err) => {
         if (err.name === "AbortError") return;
         setExactFloatMap((prev) => ({ ...prev, [assetId]: null }));
-        setFloatError("Presny float se nepodarilo nacist.");
+        setFloatError("Přesný float se nepodařilo načíst.");
       })
       .finally(() =>
         setFloatLoadingAssetId((current) => (current === assetId ? null : current))
@@ -748,13 +748,13 @@ export default function InventoryPage() {
     return (
       <section className="container-max py-10">
         <div className="card p-6 space-y-3">
-          <div className="kicker">Inventar</div>
-          <h1 className="display text-3xl">Steam inventar</h1>
+          <div className="kicker">Inventář</div>
+          <h1 className="display text-3xl">Steam inventář</h1>
           <p className="text-[color:var(--muted)]">
-            Pro zobrazeni inventare se prihlas pres Steam.
+            Pro zobrazení inventáře se přihlas přes Steam.
           </p>
           <a href="/api/steam/login" className="btn-primary w-fit">
-            Prihlasit pres Steam
+            Přihlásit přes Steam
           </a>
         </div>
       </section>
@@ -769,7 +769,7 @@ export default function InventoryPage() {
           <div className="flex flex-wrap items-end gap-5">
             <div>
               <div className="kicker">Steam</div>
-              <h1 className="display text-4xl">Inventory</h1>
+              <h1 className="display text-4xl">Inventář</h1>
             </div>
             <div className="stat-tile min-w-28 text-sm text-[color:var(--muted)]">
               <div>Items</div>
@@ -786,7 +786,7 @@ export default function InventoryPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search..."
+                placeholder="Hledat..."
                 className="w-full bg-transparent text-sm text-[color:var(--fg)] placeholder:text-[color:var(--muted)] outline-none"
               />
             </div>
@@ -794,13 +794,13 @@ export default function InventoryPage() {
               onClick={() => setRefreshNonce((v) => v + 1)}
               className="btn-ghost text-sm px-4 py-2"
             >
-              Refresh
+              Obnovit
             </button>
             <button
               onClick={() => setFiltersOpen((v) => !v)}
               className="btn-ghost text-sm px-4 py-2"
             >
-              Filters
+              Filtry
             </button>
           </div>
         </div>
@@ -812,7 +812,7 @@ export default function InventoryPage() {
         )}
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-[color:var(--muted)]">Sort:</span>
+          <span className="text-xs text-[color:var(--muted)]">Řazení:</span>
           {sortOptions.map((option) => (
             <button
               key={option.value}
@@ -826,7 +826,7 @@ export default function InventoryPage() {
               {option.label}
             </button>
           ))}
-          {priceLoading && <span className="text-xs text-[color:var(--muted)]">Nacitani cen...</span>}
+          {priceLoading && <span className="text-xs text-[color:var(--muted)]">Načítání cen...</span>}
           {!priceLoading && priceLastSyncedAt && (
             <span className="text-xs text-[color:var(--muted)]">
               Ceny {formatDateTime(priceLastSyncedAt)} / live {priceSummary.live} /
@@ -839,15 +839,15 @@ export default function InventoryPage() {
         {filtersOpen && (
           <div className="surface mb-4 p-4 sm:p-5">
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-xl font-semibold">Filters</div>
+              <div className="text-xl font-semibold">Filtry</div>
               <button onClick={clearAllFilters} className="text-xs font-semibold text-[color:var(--accent-2)] hover:underline">
-                Reset all
+                Resetovat vše
               </button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-2">
-                <div className="text-sm font-semibold">Category</div>
+                <div className="text-sm font-semibold">Kategorie</div>
                 {(["Normal", "StatTrak", "Souvenir"] as Category[]).map((category) => (
                   <label key={category} className="inline-flex w-full items-center gap-2 text-sm">
                     <input
@@ -929,7 +929,7 @@ export default function InventoryPage() {
           <div>
             {!loading && !sortedItems.length && (
               <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-6 py-12 text-center text-[color:var(--muted)]">
-                Inventar je prazdny nebo filtry nic nenasly.
+                Inventář je prázdný nebo filtry nic nenašly.
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1003,7 +1003,7 @@ export default function InventoryPage() {
           </div>
 
           <aside className="card h-fit p-5 xl:sticky xl:top-24">
-            {!selectedItem && <div className="text-sm text-[color:var(--muted)]">Vyber item z inventare.</div>}
+            {!selectedItem && <div className="text-sm text-[color:var(--muted)]">Vyber item z inventáře.</div>}
             {selectedItem && (
               <div className="space-y-4">
                 <div className="market-stage overflow-hidden p-4">
@@ -1041,7 +1041,7 @@ export default function InventoryPage() {
                   )}
                   {floatLoadingAssetId === selectedItem.assetId && (
                     <div className="mt-1 text-xs text-[color:var(--muted)]">
-                      Nacitam presny float...
+                      Načítám přesný float...
                     </div>
                   )}
                 </div>
@@ -1050,13 +1050,13 @@ export default function InventoryPage() {
                     <span>Price</span>
                     <span className="font-semibold">{selectedItem.price !== null ? currency.format(selectedItem.price) : "-"}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Mnozstvi</span><span>x{selectedItem.amount}</span></div>
+                  <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Množství</span><span>x{selectedItem.amount}</span></div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
                     <span>Zdroj ceny</span>
                     <span>{selectedItemPriceSource}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
-                    <span>Aktualizovano</span>
+                    <span>Aktualizováno</span>
                     <span>{formatDateTime(selectedItem.priceUpdatedAt)}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-[color:var(--muted)]"><span>Category</span><span>{selectedItem.category}</span></div>

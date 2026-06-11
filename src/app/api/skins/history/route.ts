@@ -15,7 +15,7 @@ export async function POST() {
     const result = await recordPriceHistory();
     return NextResponse.json(
       {
-        message: "Historicke ceny ulozeny.",
+        message: "Historické ceny uloženy.",
         inserted: result.inserted,
         total: result.total,
         capturedAt: result.capturedAt,

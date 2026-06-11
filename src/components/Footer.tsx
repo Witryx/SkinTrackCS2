@@ -7,7 +7,7 @@ export default function Footer() {
         <p>SkinTrack CS2 / {new Date().getFullYear()}</p>
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           <Link className="link" href="/privacy">
-            Podminky a privacy policy
+            Podmínky a privacy policy
           </Link>
           <a
             className="link"

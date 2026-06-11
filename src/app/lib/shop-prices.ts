@@ -279,7 +279,7 @@ const fetchSkinport = async (marketHashName: string): Promise<ShopPrice> => {
           : exact
             ? undefined
             : "Normalizovany match"
-        : "Neni v live Skinport tradable feedu",
+        : "Není v live Skinport tradable feedu",
       url: item?.market_page ?? item?.item_page ?? "https://skinport.com",
     };
   } catch {
@@ -367,7 +367,7 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
       price: null,
       currency: "EUR",
       note: priceList
-        ? "Neni v CSFloat price-listu"
+        ? "Není v CSFloat price-listu"
         : "Price-list nedostupny / chybi API key",
       url: searchUrl,
     };
@@ -416,7 +416,7 @@ const fetchCsFloat = async (marketHashName: string): Promise<ShopPrice> => {
       label: "CSFloat",
       price,
       currency: "USD",
-      note: "Nejnizsi buy now listing",
+      note: "Nejnižší buy now listing",
       url: searchUrl,
     };
   } catch (err) {
@@ -485,7 +485,7 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       label: "DMarket",
       price: null,
       currency: "EUR",
-      note: "Presna cena vyzaduje API klic",
+      note: "Přesná cena vyžaduje API klíč",
       url: searchUrl,
     };
   }
@@ -495,7 +495,7 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       label: "DMarket",
       price: null,
       currency: "EUR",
-      note: "Neplatny format API klice",
+      note: "Neplatný formát API klíče",
       url: searchUrl,
     };
   }
@@ -505,7 +505,7 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       label: "DMarket",
       price: null,
       currency: "EUR",
-      note: "Neplatna delka API klice",
+      note: "Neplatná délka API klíče",
       url: searchUrl,
     };
   }
@@ -561,7 +561,7 @@ const fetchDMarket = async (marketHashName: string): Promise<ShopPrice> => {
       currency: bestPrice.currency ?? "USD",
       note:
         entry?.title && !exactMatch
-          ? `Nepresny match: ${entry.title}`
+          ? `Nepřesný match: ${entry.title}`
           : "Best offer price",
       url: searchUrl,
     };

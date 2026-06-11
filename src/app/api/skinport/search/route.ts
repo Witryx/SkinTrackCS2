@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Skinport search failed", error);
     return NextResponse.json(
-      { error: "Nepodarilo se nacist data ze Skinport API." },
+      { error: "Nepodařilo se načíst data ze Skinport API." },
       { status: 500 }
     );
   }

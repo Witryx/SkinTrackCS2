@@ -50,7 +50,7 @@ export default function SteamProvider(
       };
     },
 
-    // Umozni pridat clientSecret atd. z route.ts.
+    // Umožní přidat clientSecret atd. z route.ts.
     ...options,
   };
 }

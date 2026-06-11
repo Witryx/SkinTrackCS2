@@ -8,7 +8,7 @@ import NotificationBell from "./NotificationBell";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { href: "/", label: "Domu" },
+  { href: "/", label: "Domů" },
   { href: "/explorer", label: "Explorer" },
   { href: "/tradeup", label: "Trade-up sim" },
 ] as const;
@@ -132,7 +132,7 @@ export default function Header() {
               onClick={() => (window.location.href = "/api/steam/login")}
               className="btn-primary hidden text-sm md:inline-flex"
             >
-              Prihlasit pres Steam
+              Přihlásit přes Steam
             </button>
           )}
 
@@ -173,7 +173,7 @@ export default function Header() {
                     href="/inventory"
                     className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)]"
                   >
-                    Inventar
+                    Inventář
                   </Link>
 
                   <Link
@@ -187,7 +187,7 @@ export default function Header() {
                     onClick={logout}
                     className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-500 hover:bg-rose-500/10"
                   >
-                    Odhlasit
+                    Odhlásit
                   </button>
                 </div>
               )}

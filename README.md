@@ -1,28 +1,28 @@
 # SkinTrack CS2
 
-Webova aplikace pro sledovani CS2 skinu, cen, trendu, wishlistu a cenovych alertu.
+Webová aplikace pro sledování CS2 skinů, cen, trendů, wishlistu a cenových alertů.
 
-## Splneni pozadavku
+## Splnění požadavků
 
-| Pozadavek | Splneni v projektu |
+| Požadavek | Splnění v projektu |
 | --- | --- |
-| Programovaci jazyk a framework | TypeScript, React a Next.js App Router |
-| Databaze a jeji vyuziti | MariaDB/MySQL pres Prisma ORM, modely `User`, `Skin`, `Shop`, `PriceHistory`, `Favorite`, `Notification` |
+| Programovací jazyk a framework | TypeScript, React a Next.js App Router |
+| Databáze a její využití | MariaDB/MySQL přes Prisma ORM, modely `User`, `Skin`, `Shop`, `PriceHistory`, `Favorite`, `Notification` |
 | Kontejnerizace | `Dockerfile` pro aplikaci a `docker-compose.yml` pro aplikaci + MariaDB |
-| Responzivni design | Tailwind CSS, responzivni gridy a breakpointy pro desktop i mobil |
-| Sifrovani citlivych udaju | API klice v env promennych, e-mail pro alerty ulozeny pomoci AES-256-GCM, lookup pres HMAC hash |
-| Nasazena aplikace | Aplikace je pripravena pro Docker deployment nebo Vercel/Render deployment; produkcni URL nastavte v `NEXT_PUBLIC_SITE_URL` |
-| Podminky pouzivani / privacy policy | Stranka `/privacy` dostupna z paticky aplikace |
+| Responzivní design | Tailwind CSS, responzivní gridy a breakpointy pro desktop i mobil |
+| Šifrování citlivých údajů | API klíče v env proměnných, e-mail pro alerty uložený pomocí AES-256-GCM, lookup přes HMAC hash |
+| Nasazená aplikace | Aplikace je připravena pro Docker deployment nebo Vercel/Render deployment; produkční URL nastavte v `NEXT_PUBLIC_SITE_URL` |
+| Podmínky používání / privacy policy | Stránka `/privacy` dostupná z patičky aplikace |
 
-## Lokalne
+## Lokálně
 
-1. Nainstalujte zavislosti:
+1. Nainstalujte závislosti:
 
 ```bash
 npm install
 ```
 
-2. Vytvorte `.env` podle `.env.example` a nastavte minimalne:
+2. Vytvořte `.env` podle `.env.example` a nastavte minimálně:
 
 ```bash
 DATABASE_URL="mysql://skinner:skinnerpass@localhost:3306/skinner"
@@ -31,52 +31,52 @@ NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 APP_ENCRYPTION_KEY="..."
 ```
 
-Klic pro sifrovani vygenerujete:
+Klíč pro šifrování vygenerujete:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-3. Spustte databazi:
+3. Spusťte databázi:
 
 ```bash
 docker compose up -d mariadb
 ```
 
-4. Aplikujte migrace a spustte aplikaci:
+4. Aplikujte migrace a spusťte aplikaci:
 
 ```bash
 npm run db:migrate
 npm run dev
 ```
 
-Aplikace pobezi na `http://localhost:3000`.
+Aplikace poběží na `http://localhost:3000`.
 
 ## Docker
 
-Pro kompletni beh aplikace i databaze:
+Pro kompletní běh aplikace i databáze:
 
 ```bash
 docker compose up --build
 ```
 
-Compose spusti:
+Compose spustí:
 
 - `app` na portu `3000`
 - `mariadb` na portu `3306`
-- automaticke `prisma migrate deploy` pri startu kontejneru aplikace
+- automatické `prisma migrate deploy` při startu kontejneru aplikace
 
-## Produkcni nasazeni
+## Produkční nasazení
 
-Pro produkci nastavte tyto promenne prostredi v hostingu:
+Pro produkci nastavte tyto proměnné prostředí v hostingu:
 
 - `DATABASE_URL`
-- `DOCKER_DATABASE_URL` pro Docker Compose, pokud se lisi od defaultni MariaDB sluzby
+- `DOCKER_DATABASE_URL` pro Docker Compose, pokud se liší od defaultní MariaDB služby
 - `NEXT_PUBLIC_SITE_URL`
 - `APP_ENCRYPTION_KEY`
-- volitelne `STEAM_API_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `CSFLOAT_API_KEY`, `DMARKET_PUBLIC_KEY`, `DMARKET_SECRET_KEY`
+- volitelně `STEAM_API_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `CSFLOAT_API_KEY`, `DMARKET_PUBLIC_KEY`, `DMARKET_SECRET_KEY`
 
-Po nasazeni spustte migrace:
+Po nasazení spusťte migrace:
 
 ```bash
 npm run db:migrate
@@ -100,4 +100,4 @@ Projekt obsahuje `vercel.json` s cronem:
 }
 ```
 
-To znamena jednou denne ve 03:00 UTC. Vercel Hobby plan nepovoli castejsi cron typu `0 */6 * * *`, proto musi byt schedule maximalne jednou denne. Pokud je cron nastaveny i ve Vercel dashboardu, zmente ho tam na stejnou hodnotu nebo ho smazte a nechte konfiguraci z repozitare.
+To znamená jednou denně ve 03:00 UTC. Vercel Hobby plán nepovolí častější cron typu `0 */6 * * *`, proto musí být schedule maximálně jednou denně. Pokud je cron nastavený i ve Vercel dashboardu, změňte ho tam na stejnou hodnotu nebo ho smažte a nechte konfiguraci z repozitáře.

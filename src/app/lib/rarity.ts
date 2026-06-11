@@ -25,7 +25,7 @@ export const rarityTextClass: Record<Rarity, string> = {
 };
 
 export const rarityOptions: Array<{ value: Rarity | "all"; label: string }> = [
-  { value: "all", label: "Vsechny kvality" },
+  { value: "all", label: "Všechny kvality" },
   { value: "Consumer", label: "Consumer" },
   { value: "Industrial", label: "Industrial" },
   { value: "Mil-Spec", label: "Mil-Spec" },

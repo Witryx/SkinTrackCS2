@@ -28,7 +28,7 @@ export async function POST() {
   } catch (error) {
     console.error("Skin sync failed", error);
     return NextResponse.json(
-      { error: "Synchronizace skinu selhala." },
+      { error: "Synchronizace skinů selhala." },
       { status: 500 }
     );
   }

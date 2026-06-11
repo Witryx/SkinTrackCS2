@@ -153,8 +153,8 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
           if (!open) refresh();
         }}
         className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] text-sm font-semibold text-[color:var(--muted)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--fg)]"
-        title="Oznameni"
-        aria-label="Oznameni"
+        title="Oznámení"
+        aria-label="Oznámení"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
@@ -171,9 +171,9 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
         <div className="absolute right-0 z-50 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-[color:var(--border)] bg-[color:var(--card-solid)] shadow-2xl animate-fade-slide">
           <div className="flex items-center justify-between border-b border-[color:var(--border)] px-4 py-3">
             <div>
-              <div className="text-sm font-semibold">Oznameni</div>
+              <div className="text-sm font-semibold">Oznámení</div>
               <div className="text-xs text-[color:var(--muted)]">
-                {unreadCount > 0 ? `${unreadCount} neprectenych` : "Vse precteno"}
+                {unreadCount > 0 ? `${unreadCount} nepřečtených` : "Vše přečteno"}
               </div>
             </div>
             <button
@@ -182,20 +182,20 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
               disabled={unreadCount === 0}
               className="rounded-xl border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--muted)] transition hover:bg-[color:var(--surface-soft)] disabled:opacity-45"
             >
-              Precist
+              Přečíst
             </button>
           </div>
 
           <div className="max-h-96 overflow-y-auto">
             {loading && !items.length && (
               <div className="px-4 py-6 text-sm text-[color:var(--muted)]">
-                Nacitam oznameni...
+                Načítám oznámení...
               </div>
             )}
 
             {!loading && !items.length && (
               <div className="px-4 py-6 text-sm text-[color:var(--muted)]">
-                Zatim tu nejsou zadna oznameni.
+                Zatím tu nejsou žádná oznámení.
               </div>
             )}
 
@@ -239,8 +239,8 @@ export default function NotificationBell({ steamId }: NotificationBellProps) {
                     onClick={() => removeNotification(item)}
                     disabled={removingIds.has(item.id)}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-[color:var(--muted)] transition hover:border-[color:var(--border)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--danger)] disabled:opacity-45"
-                    title="Smazat oznameni"
-                    aria-label="Smazat oznameni"
+                    title="Smazat oznámení"
+                    aria-label="Smazat oznámení"
                   >
                     <svg
                       aria-hidden="true"

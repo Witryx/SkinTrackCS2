@@ -194,8 +194,8 @@ export async function POST(req: NextRequest) {
         {
           error:
             mode === "knife"
-              ? "Knife trade-up vyzaduje presne 5 Covert skinu."
-              : "Je potreba presne 10 skinu.",
+              ? "Knife trade-up vyžaduje přesně 5 Covert skinů."
+              : "Je potřeba přesně 10 skinů.",
         },
         { status: 400 }
       );
@@ -216,14 +216,14 @@ export async function POST(req: NextRequest) {
 
     if (resolved.some((entry) => !entry.meta)) {
       return NextResponse.json(
-        { error: "Nektere skiny se nepodarilo najit v meta databazi." },
+        { error: "Některé skiny se nepodařilo najít v meta databázi." },
         { status: 400 }
       );
     }
 
     if (resolved.some((entry) => entry.variant === "souvenir")) {
       return NextResponse.json(
-        { error: "Souvenir skiny nejdou pouzit v Trade Up Contractu." },
+        { error: "Souvenir skiny nejdou použít v Trade Up Contractu." },
         { status: 400 }
       );
     }
@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
     const contractVariant = resolved[0]?.variant ?? "regular";
     if (resolved.some((entry) => entry.variant !== contractVariant)) {
       return NextResponse.json(
-        { error: "Nelze michat StatTrak a regular skiny v jednom contractu." },
+        { error: "Nelze míchat StatTrak a regular skiny v jednom contractu." },
         { status: 400 }
       );
     }
@@ -239,28 +239,28 @@ export async function POST(req: NextRequest) {
     const rarity = resolved[0]?.meta?.rarity ?? null;
     if (!rarity) {
       return NextResponse.json(
-        { error: "Nelze urcit raritu vstupnich skinu." },
+        { error: "Nelze určit raritu vstupních skinů." },
         { status: 400 }
       );
     }
 
     if (resolved.some((entry) => entry.meta?.rarity !== rarity)) {
       return NextResponse.json(
-        { error: "Vsechny skiny musi mit stejnou raritu." },
+        { error: "Všechny skiny musí mít stejnou raritu." },
         { status: 400 }
       );
     }
 
     if (resolved.some((entry) => getSpecialKind(entry.meta!) !== null)) {
       return NextResponse.json(
-        { error: "Noze a rukavice nejdou pouzit jako input do trade-up contractu." },
+        { error: "Nože a rukavice nejdou použít jako input do trade-up contractu." },
         { status: 400 }
       );
     }
 
     if (mode === "knife" && rarity !== "Covert") {
       return NextResponse.json(
-        { error: "Knife trade-up funguje jen pro 5 Covert skinu." },
+        { error: "Knife trade-up funguje jen pro 5 Covert skinů." },
         { status: 400 }
       );
     }
@@ -275,7 +275,7 @@ export async function POST(req: NextRequest) {
 
     if (!nextRarity) {
       return NextResponse.json(
-        { error: "Pro tuto raritu nelze trade-up vypocitat." },
+        { error: "Pro tuto raritu nelze trade-up vypočítat." },
         { status: 400 }
       );
     }
@@ -326,7 +326,7 @@ export async function POST(req: NextRequest) {
         if (gloveOnlyPool) {
           return NextResponse.json(
             {
-              error: `Case pool "${gloveOnlyPool}" ma jen gloves. StatTrak Covert lze tradeupnout jen do StatTrak noze.`,
+              error: `Case pool "${gloveOnlyPool}" má jen gloves. StatTrak Covert lze tradeupnout jen do StatTrak nože.`,
             },
             { status: 400 }
           );
@@ -334,7 +334,7 @@ export async function POST(req: NextRequest) {
       }
       return NextResponse.json(
         {
-          error: `Pro ${poolKind} pool "${poolsWithoutOutcomes[0]}" nejsou zadne platne outputy.`,
+          error: `Pro ${poolKind} pool "${poolsWithoutOutcomes[0]}" nejsou žádné platné outputy.`,
         },
         { status: 400 }
       );

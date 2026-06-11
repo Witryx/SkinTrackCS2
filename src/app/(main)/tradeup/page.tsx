@@ -104,7 +104,7 @@ type TradeupEligibilityResponse = {
 };
 
 const rarityOptions: Array<{ value: RarityFilter; label: string }> = [
-  { value: "all", label: "Vsechny kvality" },
+  { value: "all", label: "Všechny kvality" },
   { value: "Consumer", label: "Consumer" },
   { value: "Industrial", label: "Industrial" },
   { value: "Mil-Spec", label: "Mil-Spec" },
@@ -126,8 +126,8 @@ const rarityBadgeColor: Record<DisplayRarity, string> = {
 const floatEdges = [0, 0.03, 0.07, 0.15, 0.38, 0.45, 1];
 
 const sortOptions: Array<{ value: SortMode; label: string }> = [
-  { value: "cheapest", label: "Nejnizsi cena" },
-  { value: "most-expensive", label: "Nejvyssi cena" },
+  { value: "cheapest", label: "Nejnižší cena" },
+  { value: "most-expensive", label: "Nejvyšší cena" },
 ];
 
 const currency = new Intl.NumberFormat("cs-CZ", {
@@ -346,12 +346,34 @@ const splitMarketName = (name: string) => {
 
 const getCanonicalMarketName = (name: string) => {
   const parsed = splitMarketName(name);
-  const base = `${parsed.weapon} | ${parsed.skin}`;
   const variant = getItemVariant(name);
+  const weapon = parsed.weapon
+    .replace(/^\s*stattrak(?:\u2122)?\s*/i, "")
+    .replace(/^\s*souvenir\s*/i, "")
+    .trim();
+  const base = `${weapon || parsed.weapon} | ${parsed.skin}`;
   if (variant === "stattrak") return `StatTrak\u2122 ${base}`;
   if (variant === "souvenir") return `Souvenir ${base}`;
   return base;
 };
+
+const normalizeInventoryName = (value: string) =>
+  value.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, " ");
+
+const getInventoryComparableNames = (name: string) => {
+  const normalized = normalizeInventoryName(name);
+  if (!normalized) return [];
+
+  const canonical = normalizeInventoryName(getCanonicalMarketName(name));
+  return canonical && canonical !== normalized
+    ? [normalized, canonical]
+    : [normalized];
+};
+
+const getResultInventoryComparableNames = (name: string) =>
+  splitMarketName(name).wear
+    ? [normalizeInventoryName(name)]
+    : getInventoryComparableNames(name);
 
 const mergeFloatMin = (a: number | null, b: number | null) => {
   if (typeof a === "number" && typeof b === "number") return Math.min(a, b);
@@ -454,7 +476,7 @@ export default function TradeupPage() {
   const debouncedQuery = useDebounce(query, 350);
   const requiredItems = knifeMode ? 5 : 10;
   const poolLabel = knifeMode ? "Case" : "Collection";
-  const poolFilterLabel = knifeMode ? "Vsechny case pooly" : "Vsechny kolekce";
+  const poolFilterLabel = knifeMode ? "Všechny case pooly" : "Všechny kolekce";
   const contractVariant = inputs[0]?.variant ?? (stattrakOnly ? "stattrak" : "regular");
   const completionPercent = Math.round((inputs.length / requiredItems) * 100);
 
@@ -510,8 +532,9 @@ export default function TradeupPage() {
   }, [inputs, outcomePriceInputs, storageReady, knifeMode]);
 
   useEffect(() => {
-    if (!myInventoryOnly || !steamId || inventoryLoading || inventoryNames) return;
+    if (!myInventoryOnly || !steamId || inventoryNames) return;
     const controller = new AbortController();
+    let active = true;
     setInventoryLoading(true);
 
     fetch(`/api/steam/inventory/${steamId}`, {
@@ -525,8 +548,8 @@ export default function TradeupPage() {
       .then((body) => {
         const names = Array.isArray(body?.items)
           ? body.items
-              .map((item: { marketHashName?: string }) =>
-                `${item.marketHashName ?? ""}`.trim().toLowerCase()
+              .flatMap((item: { marketHashName?: string }) =>
+                getInventoryComparableNames(`${item.marketHashName ?? ""}`)
               )
               .filter((name: string) => name.length > 0)
           : [];
@@ -536,10 +559,15 @@ export default function TradeupPage() {
         if (err.name === "AbortError") return;
         setInventoryNames(new Set());
       })
-      .finally(() => setInventoryLoading(false));
+      .finally(() => {
+        if (active) setInventoryLoading(false);
+      });
 
-    return () => controller.abort();
-  }, [myInventoryOnly, steamId, inventoryLoading, inventoryNames]);
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [myInventoryOnly, steamId, inventoryNames]);
 
   const hasActiveFilters =
     knifeMode ||
@@ -593,7 +621,7 @@ export default function TradeupPage() {
     load()
       .catch((err) => {
         if (err.name === "AbortError") return;
-        setError("Nepodarilo se nacist skiny.");
+        setError("Nepodařilo se načíst skiny.");
       })
       .finally(() => setLoading(false));
 
@@ -653,7 +681,11 @@ export default function TradeupPage() {
 
     if (myInventoryOnly) {
       if (!steamId || !inventoryNames) return [];
-      list = list.filter((item) => inventoryNames.has(item.name.toLowerCase()));
+      list = list.filter((item) =>
+        getResultInventoryComparableNames(item.name).some((name) =>
+          inventoryNames.has(name)
+        )
+      );
     }
 
     return list;
@@ -800,49 +832,49 @@ export default function TradeupPage() {
     if (inputs.length >= requiredItems) return;
     const eligibility = eligibilityByName[item.name] ?? null;
     if (!eligibility && eligibilityLoading) {
-      setSimError("Pockej na kontrolu outputu pro tenhle skin.");
+      setSimError("Počkej na kontrolu outputů pro tenhle skin.");
       return;
     }
     if (eligibility && !eligibility.canOutput) {
-      setSimError(eligibility.reason ?? "Tenhle skin nema zadne platne outputy.");
+      setSimError(eligibility.reason ?? "Tenhle skin nemá žádné platné outputy.");
       return;
     }
     const variant = getItemVariant(item.name);
     if (variant === "souvenir") {
-      setSimError("Souvenir skiny nejdou pouzit v Trade Up Contractu.");
+      setSimError("Souvenir skiny nejdou použít v Trade Up Contractu.");
       return;
     }
     if (knifeMode && variant === "stattrak" && !hasStattrakKnifePool(item)) {
       setSimError(
-        "StatTrak Covert z tohoto case poolu nelze pouzit: pool obsahuje jen gloves bez nozu."
+        "StatTrak Covert z tohoto case poolu nelze použít: pool obsahuje jen gloves bez nožů."
       );
       return;
     }
     if (inputs.length && inputs[0].variant !== variant) {
-      setSimError("Nelze michat StatTrak a regular skiny v jednom contractu.");
+      setSimError("Nelze míchat StatTrak a regular skiny v jednom contractu.");
       return;
     }
     if (inputs.length && inputs[0].rarity !== item.rarity) {
       setSimError(
         knifeMode
-          ? "Knife contract musi obsahovat 5 Covert skinu stejne rarity."
-          : "Contract musi obsahovat 10 skinu stejne rarity."
+          ? "Knife contract musí obsahovat 5 Covert skinů stejné rarity."
+          : "Contract musí obsahovat 10 skinů stejné rarity."
       );
       return;
     }
     if (!knifeMode && item.rarity === "Covert") {
-      setSimError("Covert skiny pouzij v knife/gloves modu s 5 inputy.");
+      setSimError("Covert skiny použij v knife/gloves módu s 5 inputy.");
       return;
     }
     if (knifeMode && (item.rarity !== "Covert" || isSpecialItem(item))) {
-      setSimError("Knife trade-up prijima jen bezne Covert skiny z case poolu.");
+      setSimError("Knife trade-up přijímá jen běžné Covert skiny z case poolu.");
       return;
     }
     if (!getTradeupPools(item, knifeMode).length) {
       setSimError(
         knifeMode
-          ? "Tenhle skin nema rozpoznany case pool pro knife trade-up."
-          : "Tenhle skin nema rozpoznanou collection pro trade-up."
+          ? "Tenhle skin nemá rozpoznaný case pool pro knife trade-up."
+          : "Tenhle skin nemá rozpoznanou collection pro trade-up."
       );
       return;
     }
@@ -1094,19 +1126,19 @@ export default function TradeupPage() {
     ) {
       setSimResult(null);
       if (inputs.length && hasSouvenirInput) {
-        setSimError("Souvenir skiny nejdou pouzit v Trade Up Contractu.");
+        setSimError("Souvenir skiny nejdou použít v Trade Up Contractu.");
       } else if (inputs.length && variantMismatch) {
-        setSimError("Nelze michat StatTrak a regular skiny v jednom contractu.");
+        setSimError("Nelze míchat StatTrak a regular skiny v jednom contractu.");
       } else if (inputs.length && hasImpossibleStattrakPool) {
         setSimError(
-          "Tenhle case pool ma jen gloves. Pro StatTrak knife trade-up pouzij Covert z knife poolu."
+          "Tenhle case pool má jen gloves. Pro StatTrak knife trade-up použij Covert z knife poolu."
         );
       } else if (inputs.length && rarityMismatch) {
-        setSimError("Vsechny skiny v contractu musi mit stejnou raritu.");
+        setSimError("Všechny skiny v contractu musí mít stejnou raritu.");
       } else if (hasInvalidKnifeItem) {
-        setSimError("Knife trade-up prijima jen 5 Covert skinu z podporovanych case poolu.");
+        setSimError("Knife trade-up přijímá jen 5 Covert skinů z podporovaných case poolů.");
       } else if (hasInvalidStandardItem) {
-        setSimError("Covert skiny pouzij v knife/gloves modu s 5 inputy.");
+        setSimError("Covert skiny použij v knife/gloves módu s 5 inputy.");
       } else {
         setSimError(null);
       }
@@ -1347,7 +1379,7 @@ export default function TradeupPage() {
             )}
             {simLoading && (
               <span className="rounded-full border border-[color:var(--border)] bg-cyan-300/10 px-3 py-1.5 text-xs font-bold uppercase text-[color:var(--accent)]">
-                Pocitam...
+                Počítám...
               </span>
             )}
           </div>
@@ -1492,16 +1524,16 @@ export default function TradeupPage() {
                   className="h-4 w-4"
                   style={{ accentColor: "var(--accent)" }}
                 />
-                Jen muj inventar
+                Jen můj inventář
               </label>
 
               {myInventoryOnly && !steamId && (
                 <a href="/api/steam/login" className="link text-xs">
-                  Prihlasit Steam
+                  Přihlásit Steam
                 </a>
               )}
               {myInventoryOnly && steamId && inventoryLoading && (
-                <span className="text-xs">Nacitam inventar...</span>
+                <span className="text-xs">Načítám inventář...</span>
               )}
 
               <button
@@ -1514,7 +1546,7 @@ export default function TradeupPage() {
                 onClick={clearFilters}
                 className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs font-bold text-[color:var(--muted)] transition hover:bg-[color:var(--card-solid)]"
               >
-                Reset filtru
+                Reset filtrů
               </button>
             </div>
           </div>
@@ -1522,15 +1554,15 @@ export default function TradeupPage() {
           <div className="flex items-center justify-between text-sm font-semibold text-[color:var(--muted)]">
             <span>
               {showPlaceholder
-                ? "Zadej aspon 2 znaky nebo aktivuj filtr"
+                ? "Zadej aspoň 2 znaky nebo aktivuj filtr"
                 : loading
-                  ? "Nacitam skiny..."
-                  : `Nalezeno ${sortedResults.length} skinu`}
+                  ? "Načítám skiny..."
+                  : `Nalezeno ${sortedResults.length} skinů`}
             </span>
             <span>
               {collection !== "all"
                 ? `${poolLabel}: ${collection}`
-                : `${poolLabel} filter vypnuty`}
+                : `${poolLabel} filtr vypnutý`}
             </span>
           </div>
 
@@ -1542,13 +1574,13 @@ export default function TradeupPage() {
 
           {showPlaceholder && (
             <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 py-10 text-center text-[color:var(--muted)]">
-              Skins se zobrazi az po zadani filtru.
+              Skiny se zobrazí až po zadání filtru.
             </div>
           )}
 
           {!showPlaceholder && !loading && !sortedResults.length && !error && (
             <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 py-10 text-center text-[color:var(--muted)]">
-              Nic jsme nenasli. Zkus jinou kombinaci filtru.
+              Nic jsme nenašli. Zkus jinou kombinaci filtrů.
             </div>
           )}
 
@@ -1587,20 +1619,20 @@ export default function TradeupPage() {
               const addLabel = souvenirBlocked
                 ? "Souvenir nejde"
                 : variantBlocked
-                  ? "Jiny typ"
+                  ? "Jiný typ"
                   : rarityBlocked
-                    ? "Jina rarita"
+                    ? "Jiná rarita"
                     : covertBlocked
                       ? "Gold mode"
                       : stattrakPoolBlocked
-                        ? "Bez ST noze"
+                        ? "Bez ST nože"
                       : eligibilityPending
                         ? "Kontrola"
                       : outputBlocked
                         ? "Bez outputu"
                       : knifeBlocked
                         ? "Nejde do Gold"
-                        : "Pridej";
+                        : "Přidej";
 
               return (
                 <article
@@ -1688,14 +1720,14 @@ export default function TradeupPage() {
                 onClick={clearContract}
                 className="btn-ghost text-xs"
               >
-                Vycistit
+                Vyčistit
               </button>
             </div>
 
             <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-3">
               <div className="mb-2 flex items-center justify-between text-xs font-bold text-[color:var(--muted)]">
                 <span>
-                  {inputs.length}/{requiredItems} inputu
+                  {inputs.length}/{requiredItems} inputů
                 </span>
                 <span>{completionPercent}%</span>
               </div>
@@ -1710,10 +1742,10 @@ export default function TradeupPage() {
             {(rarityMismatch || variantMismatch) && (
               <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                 {variantMismatch
-                  ? "Contract nemuze michat StatTrak a regular skiny."
+                  ? "Contract nemůže míchat StatTrak a regular skiny."
                   : knifeMode
-                    ? "Vsech 5 skinu musi byt Covert a ze stejne rarity."
-                    : "Vsech 10 skinu musi mit stejnou raritu."}
+                    ? "Všech 5 skinů musí být Covert a ze stejné rarity."
+                    : "Všech 10 skinů musí mít stejnou raritu."}
               </div>
             )}
 
@@ -1798,7 +1830,7 @@ export default function TradeupPage() {
                           value={item.customPrice}
                           onChange={(e) => updateInputPrice(index, e.target.value)}
                           inputMode="decimal"
-                          placeholder="napr. 1.35"
+                          placeholder="např. 1.35"
                           className={`mt-1 w-full rounded-md border px-2 py-1 text-sm outline-none ${
                             invalidPrice
                             ? "border-rose-500/60 bg-rose-500/10 text-rose-500"
@@ -1825,7 +1857,7 @@ export default function TradeupPage() {
                     </div>
 
                     <div className="text-[11px] font-semibold text-[color:var(--muted)]">
-                      Pouzita cena:{" "}
+                      Použitá cena:{" "}
                       <span className="font-semibold text-[color:var(--fg)]">
                         {formatCurrency(effectivePrice)}
                       </span>
@@ -1903,7 +1935,7 @@ export default function TradeupPage() {
             <div className="flex items-end justify-between">
               <div>
                 <div className="kicker">Outcomes</div>
-                <h3 className="display text-2xl">Vysledky tradeupu</h3>
+                <h3 className="display text-2xl">Výsledky tradeupu</h3>
               </div>
               {simResult && (
                 <div className="text-right text-xs text-[color:var(--muted)]">
@@ -1918,8 +1950,8 @@ export default function TradeupPage() {
 
             {!simResult && (
               <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)] px-4 py-8 text-center text-sm text-[color:var(--muted)]">
-                Outcome se prepocita automaticky jakmile mas {requiredItems}{" "}
-                {knifeMode ? "Covert skinu ze stejnych case poolu." : "skinu stejne rarity."}
+                Outcome se přepočítá automaticky, jakmile máš {requiredItems}{" "}
+                {knifeMode ? "Covert skinů ze stejných case poolů." : "skinů stejné rarity."}
               </div>
             )}
 
@@ -1985,13 +2017,13 @@ export default function TradeupPage() {
 
                       <label className="mt-3 block rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-2">
                         <div className="text-[11px] text-[color:var(--muted)]">
-                          Vlastni cena outcome
+                          Vlastní cena outcome
                         </div>
                         <input
                           value={out.customPrice}
                           onChange={(e) => updateOutcomePrice(out.key, e.target.value)}
                           inputMode="decimal"
-                          placeholder="napr. 4.90"
+                          placeholder="např. 4.90"
                           className={`mt-1 w-full rounded-md border px-2 py-1 text-sm outline-none ${
                             invalidPrice
                               ? "border-rose-500/60 bg-rose-500/10 text-rose-100"
@@ -2003,7 +2035,7 @@ export default function TradeupPage() {
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <div className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] px-3 py-2">
                           <div className="text-[11px] text-[color:var(--muted)]">
-                            Pouzita cena
+                            Použitá cena
                           </div>
                           <div className="text-sm font-semibold">
                             {formatCurrency(out.effectivePrice)}

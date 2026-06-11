@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       if (!meta) {
         acc[name] = {
           canOutput: false,
-          reason: "Skin neni v meta databazi.",
+          reason: "Skin není v meta databázi.",
           pool,
           outputCount: 0,
         };
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       if (variant === "souvenir") {
         acc[name] = {
           canOutput: false,
-          reason: "Souvenir skiny nejdou pouzit v Trade Up Contractu.",
+          reason: "Souvenir skiny nejdou použít v Trade Up Contractu.",
           pool,
           outputCount: 0,
         };
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
       if (getSpecialKind(meta)) {
         acc[name] = {
           canOutput: false,
-          reason: "Noze a rukavice nejdou pouzit jako input.",
+          reason: "Nože a rukavice nejdou použít jako input.",
           pool,
           outputCount: 0,
         };
@@ -164,8 +164,8 @@ export async function POST(req: NextRequest) {
           canOutput: false,
           reason:
             mode === "knife"
-              ? "Skin nema rozpoznany case pool."
-              : "Skin nema rozpoznanou collection.",
+              ? "Skin nemá rozpoznaný case pool."
+              : "Skin nemá rozpoznanou collection.",
           pool,
           outputCount: 0,
         };
@@ -185,8 +185,8 @@ export async function POST(req: NextRequest) {
             outputCount > 0
               ? null
               : variant === "stattrak"
-                ? `Case pool "${pool}" nema StatTrak noze jako output.`
-                : `Case pool "${pool}" nema zadne gold outputy.`,
+                ? `Case pool "${pool}" nemá StatTrak nože jako output.`
+                : `Case pool "${pool}" nemá žádné gold outputy.`,
           pool,
           outputCount,
         };
@@ -210,8 +210,8 @@ export async function POST(req: NextRequest) {
           outputCount > 0
             ? null
             : nextRarity
-              ? `Collection "${pool}" nema outputy rarity ${nextRarity}.`
-              : "Pro tuto raritu neni dalsi standardni output.",
+              ? `Collection "${pool}" nemá outputy rarity ${nextRarity}.`
+              : "Pro tuto raritu není další standardní output.",
         pool,
         outputCount,
       };

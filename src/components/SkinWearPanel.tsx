@@ -105,7 +105,7 @@ export default function SkinWearPanel({
         </div>
         <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-4 py-3 text-right">
           <div className="text-[10px] font-semibold uppercase text-[color:var(--muted)]">
-            Aktivni wear
+            Aktivní wear
           </div>
           <div className="text-lg font-semibold">
             {formatFloat(previewFloat)} {currentSegment?.short ?? "--"}
@@ -118,7 +118,7 @@ export default function SkinWearPanel({
 
       <div className="market-stage p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span className="text-[color:var(--muted)]">Rozsah skinu</span>
+          <span className="text-[color:var(--muted)]">Rozsah skinů</span>
           <span className="font-medium text-[color:var(--fg)]">
             {formatFloat(bounds.min)} - {formatFloat(bounds.max)}
           </span>

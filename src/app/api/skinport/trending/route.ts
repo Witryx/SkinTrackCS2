@@ -9,7 +9,7 @@ export async function GET() {
     const data = await withTimeout(getTrendingSkins(), 1800, null);
     if (!data) {
       return NextResponse.json(
-        { error: "Nepodarilo se nacist data ze Skinport API." },
+        { error: "Nepodařilo se načíst data ze Skinport API." },
         { status: 504 }
       );
     }
@@ -22,7 +22,7 @@ export async function GET() {
   } catch (error) {
     console.error("Skinport trending failed", error);
     return NextResponse.json(
-      { error: "Nepodarilo se nacist data ze Skinport API." },
+      { error: "Nepodařilo se načíst data ze Skinport API." },
       { status: 500 }
     );
   }

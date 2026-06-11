@@ -88,8 +88,8 @@ const buildSuggestionGroups = (items: SkinResult[]) => {
 };
 
 const sortOptions = [
-  { value: "cheapest", label: "Nejnizsi cena" },
-  { value: "most-expensive", label: "Nejvyssi cena" },
+  { value: "cheapest", label: "Nejnižší cena" },
+  { value: "most-expensive", label: "Nejvyšší cena" },
 ] as const;
 
 
@@ -265,7 +265,7 @@ export default function ExplorerPage() {
       })
       .catch((err) => {
         if (err.name === "AbortError") return;
-        setError("Nepodarilo se nacist data z databaze skinu.");
+        setError("Nepodařilo se načíst data z databáze skinů.");
       })
       .finally(() => setLoading(false));
 
@@ -283,9 +283,9 @@ export default function ExplorerPage() {
 
   const badgeText = useMemo(() => {
     if (!hasSearched) return "Zacni psat a vyber skin ze suggestions";
-    if (loading) return "Nacitani dat z databaze...";
-    if (error) return "Chyba pri nacitani";
-    return `Nalezeno ${items.length} polozek`;
+    if (loading) return "Načítání dat z databáze...";
+    if (error) return "Chyba při načítání";
+    return `Nalezeno ${items.length} položek`;
   }, [hasSearched, loading, error, items.length]);
 
   const suggestionGroups = useMemo(
@@ -393,7 +393,7 @@ export default function ExplorerPage() {
               <div className="kicker">Skin Explorer</div>
               <h1 className="display text-4xl">Najdi skin rychleji</h1>
               <p className="mt-2 text-sm text-[color:var(--muted)]">
-                Naseptavani bezi pri psani, vysledky potvrdis Enterem nebo klikem.
+                Našeptávání běží při psaní, výsledky potvrdíš Enterem nebo klikem.
               </p>
             </div>
             <div className="badge">
@@ -443,7 +443,7 @@ export default function ExplorerPage() {
             {showSuggestionsPanel && (
               <div className="card absolute left-0 right-0 z-30 mt-3 overflow-hidden">
                 {suggestionsLoading && (
-                  <div className="px-5 py-5 text-sm text-[color:var(--muted)]">Nacitam varianty...</div>
+                  <div className="px-5 py-5 text-sm text-[color:var(--muted)]">Načítám varianty...</div>
                 )}
 
                 {!suggestionsLoading && !!categorySuggestions.length && (
@@ -464,7 +464,7 @@ export default function ExplorerPage() {
                                 {category.label}
                               </div>
                               <div className="truncate text-xs text-[color:var(--muted)]">
-                                Zobrazit vsechny skiny v kategorii
+                                Zobrazit všechny skiny v kategorii
                               </div>
                             </div>
                             <span className="rounded-lg border border-[color:var(--border)] bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold text-[color:var(--accent)]">
@@ -495,7 +495,7 @@ export default function ExplorerPage() {
                                 {weapon.label}
                               </div>
                               <div className="truncate text-xs text-[color:var(--muted)]">
-                                Zobrazit vsechny skiny pro tuhle zbran
+                                Zobrazit všechny skiny pro tuhle zbraň
                               </div>
                             </div>
                             <span className="rounded-lg border border-[color:var(--border)] bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-500">
@@ -510,7 +510,7 @@ export default function ExplorerPage() {
 
                 {!suggestionsLoading && !hasAnySuggestion && (
                   <div className="px-5 py-5 text-sm text-[color:var(--muted)]">
-                    Pro tenhle dotaz jsme nic nenasli.
+                    Pro tenhle dotaz jsme nic nenašli.
                   </div>
                 )}
 
@@ -574,7 +574,7 @@ export default function ExplorerPage() {
                               {paintSuggestion.skin}
                             </div>
                             <div className="truncate text-xs text-[color:var(--muted)]">
-                              {paintSuggestion.weaponCount} zbrani - {paintSuggestion.variantsCount} variant
+                              {paintSuggestion.weaponCount} zbraní - {paintSuggestion.variantsCount} variant
                             </div>
                           </div>
                           <span className="rounded-lg border border-[color:var(--border)] bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold text-[color:var(--accent)]">
@@ -667,7 +667,7 @@ export default function ExplorerPage() {
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <span>{rarity === "all" ? "Vsechny kvality" : rarity}</span>
+                  <span>{rarity === "all" ? "Všechny kvality" : rarity}</span>
                   {rarity !== "all" && (
                     <span
                       className={`h-2.5 w-2.5 rounded-full ${
@@ -755,7 +755,7 @@ export default function ExplorerPage() {
           )}
           {pendingInput && (
             <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-3 py-1 text-xs text-amber-500">
-              Nepotvrzene zmeny ve vyhledavani
+              Nepotvrzené změny ve vyhledávání
             </span>
           )}
           {loading && <span className="text-[color:var(--fg)]">Loading...</span>}
@@ -770,13 +770,13 @@ export default function ExplorerPage() {
 
       {!hasSearched && (
         <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 py-10 text-center text-[color:var(--muted)]">
-          Pis do vyhledavani nahore, vyber suggestion a potvrd hledani.
+          Piš do vyhledávání nahoře, vyber suggestion a potvrď hledání.
         </div>
       )}
 
       {hasSearched && !loading && !items.length && !error && (
         <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface-soft)] px-6 py-10 text-center text-[color:var(--muted)]">
-          Nic jsme nenasli. Zkus zmenit filtr nebo jinou kombinaci.
+          Nic jsme nenašli. Zkus změnit filtr nebo jinou kombinaci.
         </div>
       )}
 

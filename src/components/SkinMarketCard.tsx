@@ -205,7 +205,7 @@ export default function SkinMarketCard({
             </div>
             <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] px-3 py-2 text-right">
               <div className="text-[11px] font-semibold text-[color:var(--muted)]">
-                Aktualni cena
+                Aktuální cena
               </div>
               <div
                 className={join(
