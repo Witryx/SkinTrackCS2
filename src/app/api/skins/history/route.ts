@@ -25,7 +25,7 @@ export async function POST() {
   } catch (error) {
     console.error("Price history sync failed", error);
     return NextResponse.json(
-      { error: "Ukladani historickych cen selhalo." },
+      { error: "Ukládání historických cen selhalo." },
       { status: 500 }
     );
   }
