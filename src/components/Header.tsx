@@ -157,37 +157,17 @@ export default function Header() {
               {open && (
                 <div className="card absolute right-0 mt-2 w-60 p-2 shadow-lg animate-fade-slide">
                   <Link
-                    href="/explorer"
-                    className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)] sm:hidden"
-                  >
-                    Explorer
-                  </Link>
-                  <Link
-                    href="/wishlist"
-                    className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)]"
-                  >
-                    Wishlist
-                  </Link>
-
-                  <Link
                     href="/inventory"
                     className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)]"
                   >
                     Inventář
                   </Link>
 
-                  <Link
-                    href="/tradeup"
-                    className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--muted)] hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--fg)]"
-                  >
-                    Trade-up simulator
-                  </Link>
-
                   <button
                     onClick={logout}
                     className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-500 hover:bg-rose-500/10"
                   >
-                    Odhlásit
+                    Odhlásit se
                   </button>
                 </div>
               )}
