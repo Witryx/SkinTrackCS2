@@ -816,11 +816,21 @@ export async function getSkinPriceHistory(
       where.shopId = shopId;
     }
 
-    const rows = (await model.findMany({
+    let rows = (await model.findMany({
       where,
       orderBy: { capturedAt: "asc" },
       select: { capturedAt: true, price: true, currency: true },
     })) as Array<{ capturedAt: Date; price: number; currency: string }>;
+
+    if (!rows.length && shopId) {
+      const fallbackWhere = { ...where };
+      delete fallbackWhere.shopId;
+      rows = (await model.findMany({
+        where: fallbackWhere,
+        orderBy: { capturedAt: "asc" },
+        select: { capturedAt: true, price: true, currency: true },
+      })) as Array<{ capturedAt: Date; price: number; currency: string }>;
+    }
 
     const points = rows.map((row) => ({
       date: row.capturedAt.toISOString(),
