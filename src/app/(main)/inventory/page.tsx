@@ -1002,7 +1002,7 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <aside className="card h-fit p-5 xl:sticky xl:top-24">
+          <aside className="card h-fit p-5 xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto">
             {!selectedItem && <div className="text-sm text-[color:var(--muted)]">Vyber item z inventáře.</div>}
             {selectedItem && (
               <div className="space-y-4">
