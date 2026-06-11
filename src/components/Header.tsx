@@ -86,7 +86,7 @@ export default function Header() {
             <div className="text-[11px] font-bold uppercase text-[color:var(--muted)]">
               SkinTrack
             </div>
-            <div className="truncate text-lg font-black">CS2 Market</div>
+            <div className="truncate text-lg font-black">CS2 Tracker</div>
           </div>
         </Link>
 
